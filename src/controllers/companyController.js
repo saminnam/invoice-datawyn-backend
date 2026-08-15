@@ -39,6 +39,18 @@ export const updateCompanySettings = async (req, res, next) => {
     
     const updateData = { ...req.body }
     
+    // Parse nested objects that were sent as JSON strings
+    const nestedFields = ['address', 'bankDetails', 'invoiceSettings']
+    nestedFields.forEach(field => {
+      if (updateData[field] && typeof updateData[field] === 'string') {
+        try {
+          updateData[field] = JSON.parse(updateData[field])
+        } catch (e) {
+          console.error(`Failed to parse ${field}:`, e)
+        }
+      }
+    })
+    
     // If a logo file was uploaded, add its path to the update data
     if (req.file) {
       updateData.logo = `/uploads/${req.file.filename}`

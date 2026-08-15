@@ -134,7 +134,7 @@ export const createProformaInvoice = async (req, res, next) => {
     
     // Calculate invoice totals
     const calculations = CalculationService.calculateInvoice(
-      { items: itemsWithSnapshots, ...invoiceData },
+      { items: itemsWithSnapshots, ...invoiceData, enableGST: invoiceData.enableGST !== undefined ? invoiceData.enableGST : true },
       companyStateCode
     )
     
@@ -217,7 +217,7 @@ export const updateProformaInvoice = async (req, res, next) => {
       }))
       
       calculations = CalculationService.calculateInvoice(
-        { items: itemsWithSnapshots, ...invoiceData },
+        { items: itemsWithSnapshots, ...invoiceData, enableGST: invoiceData.enableGST !== undefined ? invoiceData.enableGST : true },
         companyStateCode
       )
     }

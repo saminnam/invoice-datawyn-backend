@@ -2,6 +2,7 @@ import Invoice from '../models/Invoice.js'
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.js'
 import { PDFService } from '../services/pdfService.js'
 import CompanySettings from '../models/CompanySettings.js'
+import ProformaInvoice from '../models/ProformaInvoice.js'
 
 export const getInvoices = async (req, res, next) => {
   try {
@@ -82,6 +83,30 @@ export const downloadInvoicePDF = async (req, res, next) => {
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoiceNumber}.pdf"`)
     res.send(pdfBuffer)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const deleteInvoice = async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id)
+    
+    if (!invoice) {
+      return errorResponse(res, 'Invoice not found', [], 404)
+    }
+    
+    // If this invoice was converted from a proforma invoice, update the proforma invoice
+    if (invoice.proformaInvoice) {
+      await ProformaInvoice.findByIdAndUpdate(invoice.proformaInvoice, {
+        convertedInvoice: null,
+        status: 'draft'
+      })
+    }
+    
+    await Invoice.findByIdAndDelete(req.params.id)
+    
+    successResponse(res, null, 'Invoice deleted successfully')
   } catch (error) {
     next(error)
   }

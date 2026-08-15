@@ -29,12 +29,14 @@ export class CalculationService {
   
   static calculateInvoice(invoiceData, companyStateCode) {
     console.log('calculateInvoice input:', invoiceData)
-    const { items, invoiceDiscount = 0, invoiceDiscountType = 'fixed' } = invoiceData
+    const { items, invoiceDiscount = 0, invoiceDiscountType = 'fixed', enableGST = true } = invoiceData
     
     // Calculate each item
     const calculatedItems = items.map(item => {
       console.log('Processing item:', item)
-      const itemCalc = this.calculateItem(item)
+      // If GST is disabled, set gstRate to 0 for calculation
+      const itemWithGST = enableGST ? item : { ...item, gstRate: 0 }
+      const itemCalc = this.calculateItem(itemWithGST)
       console.log('Item calculation result:', itemCalc)
       
       // Determine GST type based on state
@@ -44,7 +46,10 @@ export class CalculationService {
       const taxAmount = itemCalc.taxAmount
       return {
         ...item,
+        subtotal: itemCalc.subtotal,
+        discountAmount: itemCalc.discountAmount,
         taxableAmount: itemCalc.taxableAmount,
+        taxAmount: itemCalc.taxAmount,
         cgst: isInterState ? 0 : taxAmount / 2,
         sgst: isInterState ? 0 : taxAmount / 2,
         igst: isInterState ? taxAmount : 0,
@@ -67,10 +72,23 @@ export class CalculationService {
     const totalDiscount = itemDiscount + invoiceDiscountAmount
     const taxableAmount = Math.max(0, subtotal - totalDiscount)
     
-    const totalCgst = calculatedItems.reduce((sum, item) => sum + (item.cgst || 0), 0)
-    const totalSgst = calculatedItems.reduce((sum, item) => sum + (item.sgst || 0), 0)
-    const totalIgst = calculatedItems.reduce((sum, item) => sum + (item.igst || 0), 0)
-    const totalTax = totalCgst + totalSgst + totalIgst
+    // Calculate tax proportionally based on the discount
+    // Get the total tax from all items before discount
+    const totalItemTax = calculatedItems.reduce((sum, item) => sum + (item.taxAmount || 0), 0)
+    const totalItemTaxableAmount = calculatedItems.reduce((sum, item) => sum + (item.taxableAmount || 0), 0)
+    
+    // Calculate the tax proportionally based on the discount ratio
+    const taxRatio = totalItemTaxableAmount > 0 ? taxableAmount / totalItemTaxableAmount : 0
+    const totalTax = totalItemTax * taxRatio
+    
+    // Distribute the tax proportionally between CGST, SGST, and IGST
+    const totalCgstBefore = calculatedItems.reduce((sum, item) => sum + (item.cgst || 0), 0)
+    const totalSgstBefore = calculatedItems.reduce((sum, item) => sum + (item.sgst || 0), 0)
+    const totalIgstBefore = calculatedItems.reduce((sum, item) => sum + (item.igst || 0), 0)
+    
+    const totalCgst = totalCgstBefore * taxRatio
+    const totalSgst = totalSgstBefore * taxRatio
+    const totalIgst = totalIgstBefore * taxRatio
     
     const grandTotal = taxableAmount + totalTax
     const roundOff = Math.round(grandTotal) - grandTotal

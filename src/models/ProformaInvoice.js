@@ -56,7 +56,10 @@ const invoiceItemSchema = new mongoose.Schema({
     min: [0, 'GST rate cannot be negative'],
     max: [100, 'GST rate cannot exceed 100'],
   },
+  subtotal: Number,
+  discountAmount: Number,
   taxableAmount: Number,
+  taxAmount: Number,
   cgst: { type: Number, default: 0 },
   sgst: { type: Number, default: 0 },
   igst: { type: Number, default: 0 },
@@ -87,6 +90,10 @@ const proformaInvoiceSchema = new mongoose.Schema({
   currency: {
     type: String,
     default: 'INR',
+  },
+  enableGST: {
+    type: Boolean,
+    default: true,
   },
   
   // Customer Reference & Snapshot

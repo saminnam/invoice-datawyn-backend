@@ -2,7 +2,8 @@ import express from 'express'
 import {
   getInvoices,
   getInvoice,
-  downloadInvoicePDF
+  downloadInvoicePDF,
+  deleteInvoice
 } from '../controllers/invoiceController.js'
 import { authMiddleware } from '../middleware/authMiddleware.js'
 
@@ -15,6 +16,7 @@ router.route('/')
 
 router.route('/:id')
   .get(getInvoice)
+  .delete(deleteInvoice)
 
 router.get('/:id/pdf', downloadInvoicePDF)
 
