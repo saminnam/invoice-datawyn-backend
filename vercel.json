@@ -11,11 +11,5 @@
       "src": "/(.*)",
       "dest": "/src/server.js"
     }
-  ],
-  "env": {
-    "JWT_SECRET": "@jwt_secret",
-    "CLIENT_URL": "https://invoice-datawyntechnologies.vercel.app,http://localhost:5173,http://localhost:3000",
-    "NODE_ENV": "production",
-    "VERCEL": "true"
-  }
+  ]
 }
