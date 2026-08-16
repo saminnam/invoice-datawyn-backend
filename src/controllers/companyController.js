@@ -51,9 +51,16 @@ export const updateCompanySettings = async (req, res, next) => {
       }
     })
     
-    // If a logo file was uploaded, add its path to the update data
+    // If a logo file was uploaded, handle it based on storage type
     if (req.file) {
-      updateData.logo = `/uploads/${req.file.filename}`
+      if (req.file.filename) {
+        // Disk storage (local development)
+        updateData.logo = `/uploads/${req.file.filename}`
+      } else if (req.file.buffer) {
+        // Memory storage (Vercel/serverless) - convert to base64
+        const base64Image = req.file.buffer.toString('base64')
+        updateData.logo = `data:${req.file.mimetype};base64,${base64Image}`
+      }
     }
     
     if (!settings) {
