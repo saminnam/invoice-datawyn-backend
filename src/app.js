@@ -26,7 +26,23 @@ app.use(helmet())
 
 // CORS configuration
 app.use(cors({
-  origin: config.clientUrl,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true)
+    
+    // Use allowed origins from config or fallback to defaults
+    const allowedOrigins = config.clientUrl.length > 0 ? config.clientUrl : [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://invoice-datawyntechnologies.vercel.app'
+    ]
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
   credentials: true
 }))
 
