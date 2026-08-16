@@ -21,29 +21,43 @@ import dashboardRoutes from './routes/dashboardRoutes.js'
 
 const app = express()
 
-// Security middleware
-app.use(helmet())
-
-// CORS configuration
+// CORS configuration (must be before other middleware)
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true)
     
-    // Use allowed origins from config or fallback to defaults
-    const allowedOrigins = config.clientUrl.length > 0 ? config.clientUrl : [
+    // Always allow the specific frontend domain
+    const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:3000',
       'https://invoice-datawyntechnologies.vercel.app'
     ]
     
+    // Also add any origins from config
+    if (config.clientUrl && config.clientUrl.length > 0) {
+      config.clientUrl.forEach(url => {
+        if (!allowedOrigins.includes(url)) {
+          allowedOrigins.push(url)
+        }
+      })
+    }
+    
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true)
     } else {
+      console.log('CORS blocked origin:', origin)
       callback(new Error('Not allowed by CORS'))
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}))
+
+// Security middleware
+app.use(helmet({
+  crossOriginEmbedderPolicy: false
 }))
 
 // Rate limiting
