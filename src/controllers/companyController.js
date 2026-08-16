@@ -1,6 +1,30 @@
 import CompanySettings from '../models/CompanySettings.js'
 import { successResponse, errorResponse } from '../utils/response.js'
 
+export const getPublicCompanySettings = async (req, res, next) => {
+  try {
+    let settings = await CompanySettings.findOne()
+    
+    // If no settings exist, return default
+    if (!settings) {
+      return successResponse(res, {
+        logo: null,
+        companyName: 'Datawyn Technologies'
+      })
+    }
+    
+    // Return only public-safe information
+    const publicSettings = {
+      logo: settings.logo,
+      companyName: settings.companyName
+    }
+    
+    successResponse(res, publicSettings)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const getCompanySettings = async (req, res, next) => {
   try {
     let settings = await CompanySettings.findOne()
