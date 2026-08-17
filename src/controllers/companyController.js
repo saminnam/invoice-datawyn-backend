@@ -64,7 +64,7 @@ export const updateCompanySettings = async (req, res, next) => {
     const updateData = { ...req.body }
     
     // Parse nested objects that were sent as JSON strings
-    const nestedFields = ['address', 'bankDetails', 'invoiceSettings']
+    const nestedFields = ['address', 'bankDetails', 'authorizedSignatory', 'invoiceSettings']
     nestedFields.forEach(field => {
       if (updateData[field] && typeof updateData[field] === 'string') {
         try {
@@ -98,6 +98,48 @@ export const updateCompanySettings = async (req, res, next) => {
     }
     
     successResponse(res, settings, 'Company settings updated successfully')
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const updateSignature = async (req, res, next) => {
+  try {
+    let settings = await CompanySettings.findOne()
+    
+    if (!settings) {
+      return errorResponse(res, 'Company settings not found', [], 404)
+    }
+    
+    const updateData = {}
+    
+    // If a signature file was uploaded, handle it based on storage type
+    if (req.file) {
+      if (req.file.filename) {
+        // Disk storage (local development)
+        updateData['authorizedSignatory.signatureImage'] = `/uploads/${req.file.filename}`
+      } else if (req.file.buffer) {
+        // Memory storage (Vercel/serverless) - convert to base64
+        const base64Image = req.file.buffer.toString('base64')
+        updateData['authorizedSignatory.signatureImage'] = `data:${req.file.mimetype};base64,${base64Image}`
+      }
+    }
+    
+    // Also update name and designation if provided
+    if (req.body.name) {
+      updateData['authorizedSignatory.name'] = req.body.name
+    }
+    if (req.body.designation) {
+      updateData['authorizedSignatory.designation'] = req.body.designation
+    }
+    
+    settings = await CompanySettings.findByIdAndUpdate(
+      settings._id,
+      updateData,
+      { new: true, runValidators: true }
+    )
+    
+    successResponse(res, settings, 'Signature updated successfully')
   } catch (error) {
     next(error)
   }

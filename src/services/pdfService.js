@@ -43,10 +43,10 @@ export class PDFService {
         this.addTermsAndConditions(doc, invoice, textColor)
         
         // Signature section
-        this.addSignature(doc, invoice, companySettings, textColor)
+        const signatureEndY = this.addSignature(doc, invoice, companySettings, textColor)
         
-        // Contact footer
-        this.addContactFooter(doc, companySettings, darkGrey, white)
+        // Contact footer - positioned after signature with minimum spacing
+        this.addContactFooter(doc, companySettings, darkGrey, white, signatureEndY)
         
         doc.end()
       } catch (error) {
@@ -296,7 +296,7 @@ export class PDFService {
   
   static addTermsAndConditions(doc, invoice, textColor) {
     const itemsLength = invoice.items ? invoice.items.length : 0
-    const termsY = 240 + (itemsLength * 35) + 200
+    const termsY = 240 + (itemsLength * 35) + 210
     
     doc.fillColor(textColor)
       .fontSize(12)
@@ -326,24 +326,84 @@ export class PDFService {
       .font('Helvetica')
       .text('Authorized Signature', 350, signatureY)
     
-    // Signature line
-    doc.moveTo(350, signatureY + 30)
-      .lineTo(550, signatureY + 30)
-      .lineWidth(1)
-      .stroke('#999999')
+    let currentY = signatureY + 15
     
-    // Signature name
-    doc.fillColor(textColor)
-      .fontSize(11)
-      .font('Helvetica-Bold')
-      .text('Kazuma Jean, HR Director', 350, signatureY + 40)
+    // Add signature image if available
+    if (company.authorizedSignatory?.signatureImage) {
+      try {
+        let signaturePath
+        if (company.authorizedSignatory.signatureImage.startsWith('/uploads/')) {
+          const filename = company.authorizedSignatory.signatureImage.replace('/uploads/', '')
+          signaturePath = path.join(process.cwd(), 'uploads', filename)
+        } else if (company.authorizedSignatory.signatureImage.startsWith('uploads/')) {
+          signaturePath = path.join(process.cwd(), company.authorizedSignatory.signatureImage)
+        } else if (company.authorizedSignatory.signatureImage.startsWith('http')) {
+          console.log('URL-based signatures not yet supported in PDF')
+        } else {
+          signaturePath = path.join(process.cwd(), 'uploads', company.authorizedSignatory.signatureImage)
+        }
+        
+        if (signaturePath && fs.existsSync(signaturePath)) {
+          doc.image(signaturePath, 350, currentY, { width: 200, height: 50 })
+          currentY += 55
+        } else {
+          console.log('Signature file not found at path:', signaturePath)
+          // Fallback to signature line
+          doc.moveTo(350, currentY + 15)
+            .lineTo(550, currentY + 15)
+            .lineWidth(1)
+            .stroke('#999999')
+          currentY += 25
+        }
+      } catch (error) {
+        console.log('Could not load signature:', error)
+        // Fallback to signature line
+        doc.moveTo(350, currentY + 15)
+          .lineTo(550, currentY + 15)
+          .lineWidth(1)
+          .stroke('#999999')
+        currentY += 25
+      }
+    } else {
+      // Signature line
+      doc.moveTo(350, currentY + 15)
+        .lineTo(550, currentY + 15)
+        .lineWidth(1)
+        .stroke('#999999')
+      currentY += 25
+    }
     
-    return signatureY + 60
+    // Signature name and designation
+    if (company.authorizedSignatory?.name) {
+      doc.fillColor(textColor)
+        .fontSize(11)
+        .font('Helvetica-Bold')
+        .text(company.authorizedSignatory.name, 350, currentY)
+      currentY += 15
+      
+      if (company.authorizedSignatory?.designation) {
+        doc.fillColor('#666666')
+          .fontSize(10)
+          .font('Helvetica')
+          .text(company.authorizedSignatory.designation, 350, currentY)
+        currentY += 15
+      }
+    } else {
+      doc.fillColor(textColor)
+        .fontSize(11)
+        .font('Helvetica-Bold')
+        .text('Authorized Signatory', 350, currentY)
+      currentY += 15
+    }
+    
+    // Return the final Y position but cap it to avoid footer overlap
+    return Math.min(currentY + 10, 730)
   }
   
-  static addContactFooter(doc, company, darkGrey, white) {
-    // Footer background
-    doc.rect(0, 750, 595.28, 47)
+  static addContactFooter(doc, company, darkGrey, white, signatureEndY = 750) {
+    // Footer background - position based on content or default
+    const footerY = Math.max(signatureEndY + 10, 750)
+    doc.rect(0, footerY, 595.28, 47)
       .fill(darkGrey)
     
     // Contact information
@@ -353,24 +413,24 @@ export class PDFService {
     
     // Phone
     if (company.phone) {
-      doc.text(`📞 ${company.phone}`, 40, 770)
+      doc.text(`📞 ${company.phone}`, 40, footerY + 20)
     }
     
     // Address
     const address = company.address || {}
     const addressText = [address.street, address.city, address.state, address.pincode].filter(Boolean).join(', ')
     if (addressText) {
-      doc.text(`📍 ${addressText}`, 200, 770)
+      doc.text(`📍 ${addressText}`, 200, footerY + 20)
     }
     
     // Email
     if (company.email) {
-      doc.text(`✉️ ${company.email}`, 400, 770)
+      doc.text(`✉️ ${company.email}`, 400, footerY + 20)
     }
     
     // Website
     if (company.website) {
-      doc.text(`🌐 ${company.website}`, 40, 785)
+      doc.text(`🌐 ${company.website}`, 40, footerY + 35)
     }
   }
 }

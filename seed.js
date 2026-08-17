@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 import bcrypt from 'bcryptjs'
 import { config } from './src/config/env.js'
 import User from './src/models/User.js'
+import Role from './src/models/Role.js'
 
 const seed = async () => {
   try {
@@ -12,12 +13,26 @@ const seed = async () => {
     await User.deleteMany({})
     console.log('Cleared existing data')
 
+    // Get or create admin role
+    let adminRole = await Role.findOne({ name: 'Admin' })
+    if (!adminRole) {
+      console.log('Warning: Admin role not found. Please run seedRBAC.js first')
+      adminRole = await Role.create({
+        name: 'Admin',
+        description: 'Full system access',
+        permissions: [],
+        isSystem: true
+      })
+    }
+
     // Create admin user
     const admin = await User.create({
       name: 'Admin User',
       email: 'admin@datawyn.com',
       password: 'admin123',
-      role: 'admin'
+      role: adminRole._id,
+      legacyRole: 'admin',
+      isActive: true
     })
     console.log('Created admin user')
 

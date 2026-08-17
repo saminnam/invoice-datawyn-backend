@@ -22,14 +22,28 @@ const userSchema = new mongoose.Schema({
     select: false,
   },
   role: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Role',
+    default: null,
+  },
+  // Keep legacy role string for backward compatibility
+  legacyRole: {
     type: String,
     enum: ['admin', 'staff'],
     default: 'staff',
   },
+  permissions: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Permission'
+  }],
   isActive: {
     type: Boolean,
     default: true,
   },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }
 }, {
   timestamps: true,
 })

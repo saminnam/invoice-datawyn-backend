@@ -17,6 +17,12 @@ const bankDetailsSchema = new mongoose.Schema({
   branch: String,
 }, { _id: false })
 
+const authorizedSignatorySchema = new mongoose.Schema({
+  name: String,
+  designation: String,
+  signatureImage: String,
+}, { _id: false })
+
 const invoiceSettingsSchema = new mongoose.Schema({
   prefix: { type: String, default: 'PI' },
   startingNumber: { type: Number, default: 1 },
@@ -62,6 +68,12 @@ const companySettingsSchema = new mongoose.Schema({
   // Bank Details
   bankDetails: {
     type: bankDetailsSchema,
+    default: {},
+  },
+  
+  // Authorized Signatory
+  authorizedSignatory: {
+    type: authorizedSignatorySchema,
     default: {},
   },
   

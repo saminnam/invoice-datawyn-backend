@@ -32,7 +32,8 @@ if (config.isVercel) {
       },
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-        cb(null, 'logo-' + uniqueSuffix + path.extname(file.originalname))
+        const fieldName = file.fieldname || 'file'
+        cb(null, fieldName + '-' + uniqueSuffix + path.extname(file.originalname))
       }
     })
   }
@@ -58,5 +59,9 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 })
+
+// Export configured upload instances for different fields
+export const uploadLogo = upload.single('logo')
+export const uploadSignature = upload.single('signature')
 
 export default upload

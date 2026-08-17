@@ -18,6 +18,9 @@ import proformaRoutes from './routes/proformaRoutes.js'
 import invoiceRoutes from './routes/invoiceRoutes.js'
 import companyRoutes from './routes/companyRoutes.js'
 import dashboardRoutes from './routes/dashboardRoutes.js'
+import userRoutes from './routes/userRoutes.js'
+import roleRoutes from './routes/roleRoutes.js'
+import permissionRoutes from './routes/permissionRoutes.js'
 
 const app = express()
 
@@ -86,6 +89,9 @@ app.use('/api/proforma', proformaRoutes)
 app.use('/api/invoices', invoiceRoutes)
 app.use('/api/company', companyRoutes)
 app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/users', userRoutes)
+app.use('/api/roles', roleRoutes)
+app.use('/api/permissions', permissionRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

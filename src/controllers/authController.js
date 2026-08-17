@@ -83,6 +83,9 @@ export const logout = async (req, res) => {
 export const getCurrentUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id)
+      .select('-password')
+      .populate('role')
+      .populate('permissions')
     
     if (!user) {
       return errorResponse(res, 'User not found', [], 404)
