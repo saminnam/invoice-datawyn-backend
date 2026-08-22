@@ -82,7 +82,11 @@ export const updateCompanySettings = async (req, res, next) => {
         // Disk storage (local development)
         updateData.logo = `/uploads/${logoFile.filename}`
       } else if (logoFile.buffer) {
-        // Memory storage (Vercel/serverless) - convert to base64
+        // Memory storage (Vercel/serverless) - convert to base64 with size check
+        const maxSize = 2 * 1024 * 1024 // 2MB limit
+        if (logoFile.size > maxSize) {
+          return errorResponse(res, 'Logo file too large. Maximum size is 2MB.', [], 400)
+        }
         const base64Image = logoFile.buffer.toString('base64')
         updateData.logo = `data:${logoFile.mimetype};base64,${base64Image}`
       }
@@ -95,7 +99,11 @@ export const updateCompanySettings = async (req, res, next) => {
         // Disk storage (local development)
         updateData['authorizedSignatory.signatureImage'] = `/uploads/${signatureFile.filename}`
       } else if (signatureFile.buffer) {
-        // Memory storage (Vercel/serverless) - convert to base64
+        // Memory storage (Vercel/serverless) - convert to base64 with size check
+        const maxSize = 1 * 1024 * 1024 // 1MB limit
+        if (signatureFile.size > maxSize) {
+          return errorResponse(res, 'Signature file too large. Maximum size is 1MB.', [], 400)
+        }
         const base64Image = signatureFile.buffer.toString('base64')
         updateData['authorizedSignatory.signatureImage'] = `data:${signatureFile.mimetype};base64,${base64Image}`
       }
@@ -121,6 +129,12 @@ export const updateCompanySettings = async (req, res, next) => {
     successResponse(res, settings, 'Company settings updated successfully')
   } catch (error) {
     console.error('Error updating company settings:', error)
+    if (error.name === 'ValidationError') {
+      return errorResponse(res, 'Validation error: ' + error.message, [], 400)
+    }
+    if (error.name === 'MongoError' && error.code === 134) {
+      return errorResponse(res, 'Document too large. Try uploading a smaller image.', [], 400)
+    }
     next(error)
   }
 }
