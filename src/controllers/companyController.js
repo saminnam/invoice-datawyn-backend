@@ -92,12 +92,14 @@ export const updateCompanySettings = async (req, res, next) => {
       }
     }
     
-    // Handle signature file upload
+    // Handle signature file upload - merge into authorizedSignatory object
     if (req.files && req.files.signature && req.files.signature[0]) {
       const signatureFile = req.files.signature[0]
+      let signatureImage
+      
       if (signatureFile.filename) {
         // Disk storage (local development)
-        updateData['authorizedSignatory.signatureImage'] = `/uploads/${signatureFile.filename}`
+        signatureImage = `/uploads/${signatureFile.filename}`
       } else if (signatureFile.buffer) {
         // Memory storage (Vercel/serverless) - convert to base64 with size check
         const maxSize = 1 * 1024 * 1024 // 1MB limit
@@ -105,7 +107,15 @@ export const updateCompanySettings = async (req, res, next) => {
           return errorResponse(res, 'Signature file too large. Maximum size is 1MB.', [], 400)
         }
         const base64Image = signatureFile.buffer.toString('base64')
-        updateData['authorizedSignatory.signatureImage'] = `data:${signatureFile.mimetype};base64,${base64Image}`
+        signatureImage = `data:${signatureFile.mimetype};base64,${base64Image}`
+      }
+      
+      // Merge signature image into authorizedSignatory object
+      if (signatureImage) {
+        if (!updateData.authorizedSignatory || typeof updateData.authorizedSignatory !== 'object') {
+          updateData.authorizedSignatory = {}
+        }
+        updateData.authorizedSignatory.signatureImage = signatureImage
       }
     }
     
@@ -134,6 +144,9 @@ export const updateCompanySettings = async (req, res, next) => {
     }
     if (error.name === 'MongoError' && error.code === 134) {
       return errorResponse(res, 'Document too large. Try uploading a smaller image.', [], 400)
+    }
+    if (error.message && error.message.includes('conflict')) {
+      return errorResponse(res, 'Update conflict: ' + error.message, [], 400)
     }
     next(error)
   }
