@@ -75,36 +75,8 @@ const seedRBAC = async () => {
     })
     console.log('Created Admin role')
 
-    // Create Staff role with limited permissions
-    const staffPermissions = permissions.filter(p => 
-      p.name.includes('view') || 
-      p.name.includes('create') && 
-      !p.name.includes('users') && 
-      !p.name.includes('roles') &&
-      !p.name.includes('settings')
-    )
-    
-    const staffRole = await Role.create({
-      name: 'Staff',
-      description: 'Limited access for regular staff',
-      permissions: staffPermissions.map(p => p._id),
-      isSystem: true
-    })
-    console.log('Created Staff role')
-
-    // Create Viewer role with read-only permissions
-    const viewerPermissions = permissions.filter(p => p.action === 'read')
-    
-    const viewerRole = await Role.create({
-      name: 'Viewer',
-      description: 'Read-only access',
-      permissions: viewerPermissions.map(p => p._id),
-      isSystem: true
-    })
-    console.log('Created Viewer role')
-
     console.log('\n=== RBAC Data Seeded Successfully ===')
-    console.log('Roles created: Admin, Staff, Viewer')
+    console.log('Roles created: Admin only')
     console.log('Total permissions:', permissions.length)
 
     process.exit(0)

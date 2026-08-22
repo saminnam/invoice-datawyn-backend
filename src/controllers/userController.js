@@ -131,6 +131,11 @@ export const updateUser = async (req, res, next) => {
       return errorResponse(res, 'Cannot modify your own role or permissions')
     }
     
+    // Prevent modifying the main admin user
+    if (user.email === 'admin@datawyn.com') {
+      return errorResponse(res, 'Cannot modify the main admin user')
+    }
+    
     // Check email uniqueness
     if (email && email !== user.email) {
       const existingUser = await User.findOne({ email })
@@ -192,6 +197,11 @@ export const deleteUser = async (req, res, next) => {
       return errorResponse(res, 'Cannot delete your own account')
     }
     
+    // Prevent deleting the main admin user
+    if (user.email === 'admin@datawyn.com') {
+      return errorResponse(res, 'Cannot delete the main admin user')
+    }
+    
     await User.findByIdAndDelete(id)
     successResponse(res, null, 'User deleted successfully')
   } catch (error) {
@@ -232,6 +242,11 @@ export const toggleUserStatus = async (req, res, next) => {
       return errorResponse(res, 'Cannot deactivate your own account')
     }
     
+    // Prevent deactivating the main admin user
+    if (user.email === 'admin@datawyn.com') {
+      return errorResponse(res, 'Cannot deactivate the main admin user')
+    }
+    
     user.isActive = !user.isActive
     await user.save()
     
@@ -241,6 +256,112 @@ export const toggleUserStatus = async (req, res, next) => {
       .populate('permissions')
     
     successResponse(res, populatedUser, `User ${user.isActive ? 'activated' : 'deactivated'} successfully`)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const createBulkUsers = async (req, res, next) => {
+  try {
+    const { users } = req.body
+    
+    if (!users || !Array.isArray(users) || users.length === 0) {
+      return errorResponse(res, 'Users array is required')
+    }
+
+    if (users.length > 50) {
+      return errorResponse(res, 'Cannot create more than 50 users at once')
+    }
+
+    const results = {
+      successful: [],
+      failed: []
+    }
+
+    // Validate role once if all users have the same role
+    const commonRole = users[0].role
+    let validRole = null
+    if (commonRole) {
+      validRole = await Role.findById(commonRole)
+      if (!validRole) {
+        return errorResponse(res, 'Invalid role specified')
+      }
+    }
+
+    // Validate permissions once if all users have the same permissions
+    const commonPermissions = users[0].permissions
+    let validPermissions = []
+    if (commonPermissions && commonPermissions.length > 0) {
+      validPermissions = await Permission.find({ _id: { $in: commonPermissions } })
+      if (validPermissions.length !== commonPermissions.length) {
+        return errorResponse(res, 'Some permissions are invalid')
+      }
+    }
+
+    for (const userData of users) {
+      try {
+        const { name, email, password, role, permissions, isActive } = userData
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email })
+        if (existingUser) {
+          results.failed.push({
+            email,
+            reason: 'User with this email already exists'
+          })
+          continue
+        }
+
+        // Validate role if different from common
+        if (role && role !== commonRole) {
+          const roleCheck = await Role.findById(role)
+          if (!roleCheck) {
+            results.failed.push({
+              email,
+              reason: 'Invalid role'
+            })
+            continue
+          }
+        }
+
+        // Validate permissions if different from common
+        if (permissions && permissions.length > 0) {
+          const permCheck = await Permission.find({ _id: { $in: permissions } })
+          if (permCheck.length !== permissions.length) {
+            results.failed.push({
+              email,
+              reason: 'Some permissions are invalid'
+            })
+            continue
+          }
+        }
+
+        const user = await User.create({
+          name,
+          email,
+          password,
+          role: role || null,
+          permissions: permissions || [],
+          isActive: isActive !== undefined ? isActive : true,
+          createdBy: req.user._id
+        })
+
+        const populatedUser = await User.findById(user._id)
+          .select('-password')
+          .populate('role')
+          .populate('permissions')
+          .populate('createdBy', 'name email')
+
+        results.successful.push(populatedUser)
+      } catch (error) {
+        results.failed.push({
+          email: userData.email,
+          reason: error.message
+        })
+      }
+    }
+
+    successResponse(res, results, `Created ${results.successful.length} users successfully. ${results.failed.length} failed.`)
   } catch (error) {
     next(error)
   }

@@ -8,20 +8,21 @@ import {
   getCustomerInvoices
 } from '../controllers/customerController.js'
 import { authMiddleware } from '../middleware/authMiddleware.js'
+import { requirePermission } from '../middleware/permissionMiddleware.js'
 
 const router = express.Router()
 
 router.use(authMiddleware)
 
 router.route('/')
-  .get(getCustomers)
-  .post(createCustomer)
+  .get(requirePermission('customers.view'), getCustomers)
+  .post(requirePermission('customers.create'), createCustomer)
 
 router.route('/:id')
-  .get(getCustomer)
-  .put(updateCustomer)
-  .delete(deleteCustomer)
+  .get(requirePermission('customers.view'), getCustomer)
+  .put(requirePermission('customers.edit'), updateCustomer)
+  .delete(requirePermission('customers.delete'), deleteCustomer)
 
-router.get('/:id/invoices', getCustomerInvoices)
+router.get('/:id/invoices', requirePermission('customers.view'), getCustomerInvoices)
 
 export default router

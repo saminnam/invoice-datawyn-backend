@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "seed": "node seed.js",
-    "seed:rbac": "node src/seedRBAC.js"
+    "seed:rbac": "node src/seedRBAC.js",
+    "example:rbac": "node examples/rbacUsageExample.js"
   },
   "keywords": [
     "crm",

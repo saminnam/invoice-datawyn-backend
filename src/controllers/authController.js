@@ -41,8 +41,19 @@ export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body
     
-    // Find user and include password
+    if (!email || !password) {
+      return errorResponse(res, 'Email and password are required')
+    }
+    
+    // Find user and include password with populated role and permissions
     const user = await User.findOne({ email }).select('+password')
+      .populate({
+        path: 'role',
+        populate: {
+          path: 'permissions'
+        }
+      })
+      .populate('permissions')
     
     if (!user) {
       return errorResponse(res, 'Invalid email or password')
@@ -59,6 +70,8 @@ export const login = async (req, res, next) => {
       return errorResponse(res, 'User account is inactive')
     }
     
+
+    
     // Generate token
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -66,11 +79,13 @@ export const login = async (req, res, next) => {
       { expiresIn: '7d' }
     )
     
-    // Remove password from response
-    user.password = undefined
+    // Convert to plain object and remove password
+    const userResponse = user.toObject()
+    delete userResponse.password
     
-    successResponse(res, { user, token }, 'Login successful')
+    successResponse(res, { user: userResponse, token }, 'Login successful')
   } catch (error) {
+    console.error('Login error:', error)
     next(error)
   }
 }
@@ -84,15 +99,21 @@ export const getCurrentUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id)
       .select('-password')
-      .populate('role')
+      .populate({
+        path: 'role',
+        populate: {
+          path: 'permissions'
+        }
+      })
       .populate('permissions')
     
     if (!user) {
       return errorResponse(res, 'User not found', [], 404)
     }
-    
+
     successResponse(res, user, 'User retrieved successfully')
   } catch (error) {
+    console.error('Get current user error:', error)
     next(error)
   }
 }

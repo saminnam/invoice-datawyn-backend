@@ -6,7 +6,8 @@ import {
   updateSignature
 } from '../controllers/companyController.js'
 import { authMiddleware } from '../middleware/authMiddleware.js'
-import { uploadLogo, uploadSignature } from '../middleware/upload.js'
+import { requirePermission } from '../middleware/permissionMiddleware.js'
+import { uploadLogo, uploadSignature, uploadCompanyFiles } from '../middleware/upload.js'
 
 const router = express.Router()
 
@@ -17,9 +18,9 @@ router.get('/public', getPublicCompanySettings)
 router.use(authMiddleware)
 
 router.route('/')
-  .get(getCompanySettings)
-  .put(uploadLogo, updateCompanySettings)
+  .get(requirePermission('settings.view'), getCompanySettings)
+  .put(requirePermission('settings.edit'), uploadCompanyFiles, updateCompanySettings)
 
-router.put('/signature', uploadSignature, updateSignature)
+router.put('/signature', requirePermission('settings.edit'), uploadSignature, updateSignature)
 
 export default router

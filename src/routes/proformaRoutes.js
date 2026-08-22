@@ -11,23 +11,24 @@ import {
   convertToInvoice
 } from '../controllers/proformaController.js'
 import { authMiddleware } from '../middleware/authMiddleware.js'
+import { requirePermission } from '../middleware/permissionMiddleware.js'
 
 const router = express.Router()
 
 router.use(authMiddleware)
 
 router.route('/')
-  .get(getProformaInvoices)
-  .post(createProformaInvoice)
+  .get(requirePermission('proforma.view'), getProformaInvoices)
+  .post(requirePermission('proforma.create'), createProformaInvoice)
 
 router.route('/:id')
-  .get(getProformaInvoice)
-  .put(updateProformaInvoice)
-  .delete(deleteProformaInvoice)
+  .get(requirePermission('proforma.view'), getProformaInvoice)
+  .put(requirePermission('proforma.edit'), updateProformaInvoice)
+  .delete(requirePermission('proforma.delete'), deleteProformaInvoice)
 
-router.post('/:id/duplicate', duplicateProformaInvoice)
-router.patch('/:id/status', updateInvoiceStatus)
-router.get('/:id/pdf', downloadPDF)
-router.post('/:id/convert', convertToInvoice)
+router.post('/:id/duplicate', requirePermission('proforma.create'), duplicateProformaInvoice)
+router.patch('/:id/status', requirePermission('proforma.edit'), updateInvoiceStatus)
+router.get('/:id/pdf', requirePermission('proforma.view'), downloadPDF)
+router.post('/:id/convert', requirePermission('proforma.convert'), convertToInvoice)
 
 export default router

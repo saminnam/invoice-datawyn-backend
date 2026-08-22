@@ -63,5 +63,9 @@ const upload = multer({
 // Export configured upload instances for different fields
 export const uploadLogo = upload.single('logo')
 export const uploadSignature = upload.single('signature')
+export const uploadCompanyFiles = upload.fields([
+  { name: 'logo', maxCount: 1 },
+  { name: 'signature', maxCount: 1 }
+])
 
 export default upload
