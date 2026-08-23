@@ -39,6 +39,10 @@ const productSchema = new mongoose.Schema({
         return this.priceRanges !== undefined
       },
       min: [0, 'Premium price cannot be negative'],
+    },
+    custom: {
+      type: Number,
+      min: [0, 'Custom price cannot be negative'],
     }
   },
   // Keep legacy price field for backward compatibility (defaults to standard price)

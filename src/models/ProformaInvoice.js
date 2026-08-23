@@ -32,7 +32,7 @@ const invoiceItemSchema = new mongoose.Schema({
   },
   priceRange: {
     type: String,
-    enum: ['basic', 'standard', 'premium'],
+    enum: ['basic', 'standard', 'premium', 'custom'],
     default: 'standard',
   },
   quantity: {
