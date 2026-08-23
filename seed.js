@@ -53,8 +53,8 @@ const seed = async () => {
       // Create admin user
       const admin = await User.create({
         name: 'Admin User',
-        email: 'admin@datawyn.com',
-        password: 'admin123',
+        email: 'innam@datawyn.com',
+        password: 'innam@1328',
         role: adminRole._id,
         legacyRole: 'admin',
         isActive: true
