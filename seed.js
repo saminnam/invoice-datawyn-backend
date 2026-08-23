@@ -41,14 +41,15 @@ const seed = async () => {
     }
 
     // Check if admin user already exists
-    const existingAdmin = await User.findOne({ email: 'admin@datawyn.com' })
+    const existingAdmin = await User.findOne({ email: 'innam@datawyn.com' })
     if (existingAdmin) {
-      // Update existing admin user with admin role
+      // Update existing admin user with admin role and password
       existingAdmin.role = adminRole._id
       existingAdmin.legacyRole = 'admin'
       existingAdmin.isActive = true
+      existingAdmin.password = 'innam@1328'
       await existingAdmin.save()
-      console.log('Updated existing admin user with Admin role')
+      console.log('Updated existing admin user with Admin role and password')
     } else {
       // Create admin user
       const admin = await User.create({
@@ -75,8 +76,8 @@ const seed = async () => {
 
     console.log('\n=== Seed Data Created Successfully ===')
     console.log('Admin Login:')
-    console.log('  Email: admin@datawyn.com')
-    console.log('  Password: admin123')
+    console.log('  Email: innam@datawyn.com')
+    console.log('  Password: innam@1328')
 
     process.exit(0)
   } catch (error) {
