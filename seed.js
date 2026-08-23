@@ -10,9 +10,8 @@ const seed = async () => {
     await mongoose.connect(config.mongoUri)
     console.log('Connected to MongoDB')
 
-    // Clear existing data
-    await User.deleteMany({})
-    console.log('Cleared existing data')
+    // Don't clear existing users - we'll update them instead
+    console.log('Preserving existing users')
 
     // Get or create admin role with full permissions
     let adminRole = await Role.findOne({ name: 'Admin' }).populate('permissions')
@@ -61,6 +60,17 @@ const seed = async () => {
         isActive: true
       })
       console.log('Created admin user with Admin role')
+    }
+
+    // Update all existing users to have admin role if they don't have a role
+    const usersWithoutRole = await User.find({ role: null })
+    for (const user of usersWithoutRole) {
+      user.role = adminRole._id
+      user.legacyRole = 'admin'
+      await user.save()
+    }
+    if (usersWithoutRole.length > 0) {
+      console.log(`Updated ${usersWithoutRole.length} existing users with Admin role`)
     }
 
     console.log('\n=== Seed Data Created Successfully ===')

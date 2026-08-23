@@ -9,15 +9,16 @@ const seedRBAC = async () => {
     await mongoose.connect(config.mongoUri)
     console.log('Connected to MongoDB')
 
-    // Clear existing RBAC data
+    // Clear existing RBAC data but preserve users
     await Permission.deleteMany({})
     await Role.deleteMany({})
-    console.log('Cleared existing RBAC data')
+    console.log('Cleared existing RBAC data (preserving users)')
 
     // Create permissions
     const permissions = await Permission.create([
       // Dashboard permissions
       { name: 'dashboard.view', description: 'View dashboard', module: 'dashboard', action: 'read' },
+      { name: 'dashboard.view_invoice_value', description: 'View total invoice value card', module: 'dashboard', action: 'read' },
       
       // Customer permissions
       { name: 'customers.view', description: 'View customers', module: 'customers', action: 'read' },
@@ -74,6 +75,17 @@ const seedRBAC = async () => {
       isSystem: true
     })
     console.log('Created Admin role')
+
+    // Update all existing users to have the new Admin role
+    const usersWithoutRole = await User.find({ role: null })
+    for (const user of usersWithoutRole) {
+      user.role = adminRole._id
+      user.legacyRole = 'admin'
+      await user.save()
+    }
+    if (usersWithoutRole.length > 0) {
+      console.log(`Updated ${usersWithoutRole.length} existing users with Admin role`)
+    }
 
     console.log('\n=== RBAC Data Seeded Successfully ===')
     console.log('Roles created: Admin only')
