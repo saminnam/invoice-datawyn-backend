@@ -18,10 +18,33 @@ const productSchema = new mongoose.Schema({
   description: {
     type: String,
   },
+  priceRanges: {
+    basic: {
+      type: Number,
+      required: function() {
+        return this.priceRanges !== undefined
+      },
+      min: [0, 'Basic price cannot be negative'],
+    },
+    standard: {
+      type: Number,
+      required: function() {
+        return this.priceRanges !== undefined
+      },
+      min: [0, 'Standard price cannot be negative'],
+    },
+    premium: {
+      type: Number,
+      required: function() {
+        return this.priceRanges !== undefined
+      },
+      min: [0, 'Premium price cannot be negative'],
+    }
+  },
+  // Keep legacy price field for backward compatibility (defaults to standard price)
   price: {
     type: Number,
-    required: [true, 'Price is required'],
-    min: [0, 'Price cannot be negative'],
+    default: 0
   },
   status: {
     type: String,
@@ -44,6 +67,19 @@ productSchema.pre('save', async function(next) {
     const paddedNumber = String(count + 1).padStart(4, '0')
     this.code = `PROD-${year}-${paddedNumber}`
   }
+  
+  // Handle priceRanges backward compatibility
+  if (this.priceRanges && this.priceRanges.standard) {
+    this.price = this.priceRanges.standard
+  } else if (!this.priceRanges && this.price) {
+    // If priceRanges is not set but price is, create priceRanges from price
+    this.priceRanges = {
+      basic: this.price,
+      standard: this.price,
+      premium: this.price
+    }
+  }
+  
   next()
 })
 
