@@ -33,6 +33,8 @@ const initializeTransporter = () => {
 export const EmailService = {
   async sendProformaInvoice(invoiceId, emailData) {
     try {
+      console.log('Starting proforma email send for invoice:', invoiceId)
+      
       const invoice = await ProformaInvoice.findById(invoiceId)
         .populate('customer', 'companyName')
       
@@ -40,10 +42,34 @@ export const EmailService = {
         throw new Error('Invoice not found')
       }
 
+      console.log('Proforma invoice found:', invoice.invoiceNumber)
+      console.log('Proforma invoice data structure:', {
+        hasCustomerSnapshot: !!invoice.customerSnapshot,
+        hasItems: !!invoice.items && invoice.items.length > 0,
+        itemsCount: invoice.items?.length,
+        customerSnapshot: invoice.customerSnapshot,
+        invoiceItems: invoice.items?.map(item => ({
+          hasProductSnapshot: !!item.productSnapshot,
+          hasRate: !!item.rate,
+          hasQuantity: !!item.quantity,
+          productSnapshot: item.productSnapshot
+        }))
+      })
+      
       const companySettings = await CompanySettings.findOne()
+      console.log('Proforma - Company settings found:', !!companySettings)
+      console.log('Proforma - Company settings:', {
+        hasLogo: !!companySettings?.logo,
+        hasAddress: !!companySettings?.address,
+        hasPhone: !!companySettings?.phone,
+        hasEmail: !!companySettings?.email,
+        hasAuthorizedSignatory: !!companySettings?.authorizedSignatory
+      })
       
       // Generate PDF
+      console.log('Generating proforma PDF...')
       const pdfBuffer = await PDFService.generateProformaInvoice(invoice, companySettings)
+      console.log('Proforma PDF generated successfully, size:', pdfBuffer.length)
 
       const transporter = initializeTransporter()
       
@@ -184,8 +210,29 @@ export const EmailService = {
       }
 
       console.log('Invoice found:', invoice.invoiceNumber)
+      console.log('Invoice data structure:', {
+        hasCustomerSnapshot: !!invoice.customerSnapshot,
+        hasItems: !!invoice.items && invoice.items.length > 0,
+        itemsCount: invoice.items?.length,
+        hasCompanySettings: !!companySettings,
+        customerSnapshot: invoice.customerSnapshot,
+        invoiceItems: invoice.items?.map(item => ({
+          hasProductSnapshot: !!item.productSnapshot,
+          hasRate: !!item.rate,
+          hasQuantity: !!item.quantity,
+          productSnapshot: item.productSnapshot
+        }))
+      })
+      
       const companySettings = await CompanySettings.findOne()
       console.log('Company settings found:', !!companySettings)
+      console.log('Company settings:', {
+        hasLogo: !!companySettings?.logo,
+        hasAddress: !!companySettings?.address,
+        hasPhone: !!companySettings?.phone,
+        hasEmail: !!companySettings?.email,
+        hasAuthorizedSignatory: !!companySettings?.authorizedSignatory
+      })
       
       // Generate PDF
       console.log('Generating PDF...')

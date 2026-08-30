@@ -76,7 +76,29 @@ export const downloadInvoicePDF = async (req, res, next) => {
       return errorResponse(res, 'Invoice not found', [], 404)
     }
     
+    console.log('Download PDF - Invoice found:', invoice.invoiceNumber)
+    console.log('Download PDF - Invoice data structure:', {
+      hasCustomerSnapshot: !!invoice.customerSnapshot,
+      hasItems: !!invoice.items && invoice.items.length > 0,
+      itemsCount: invoice.items?.length,
+      customerSnapshot: invoice.customerSnapshot,
+      invoiceItems: invoice.items?.map(item => ({
+        hasProductSnapshot: !!item.productSnapshot,
+        hasRate: !!item.rate,
+        hasQuantity: !!item.quantity,
+        productSnapshot: item.productSnapshot
+      }))
+    })
+    
     const companySettings = await CompanySettings.findOne()
+    console.log('Download PDF - Company settings found:', !!companySettings)
+    console.log('Download PDF - Company settings:', {
+      hasLogo: !!companySettings?.logo,
+      hasAddress: !!companySettings?.address,
+      hasPhone: !!companySettings?.phone,
+      hasEmail: !!companySettings?.email,
+      hasAuthorizedSignatory: !!companySettings?.authorizedSignatory
+    })
     
     // Use generateInvoice for regular invoices
     const pdfBuffer = await PDFService.generateInvoice(invoice, companySettings)
