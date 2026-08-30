@@ -1,6 +1,7 @@
 import Invoice from '../models/Invoice.js'
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.js'
 import { PDFService } from '../services/pdfService.js'
+import { EmailService } from '../services/emailService.js'
 import CompanySettings from '../models/CompanySettings.js'
 import ProformaInvoice from '../models/ProformaInvoice.js'
 
@@ -107,6 +108,22 @@ export const deleteInvoice = async (req, res, next) => {
     await Invoice.findByIdAndDelete(req.params.id)
     
     successResponse(res, null, 'Invoice deleted successfully')
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const sendEmail = async (req, res, next) => {
+  try {
+    const { email, emailType, message } = req.body
+    
+    if (!email) {
+      return errorResponse(res, 'Email is required')
+    }
+    
+    const result = await EmailService.sendInvoice(req.params.id, { email, message })
+    
+    successResponse(res, null, result.message)
   } catch (error) {
     next(error)
   }

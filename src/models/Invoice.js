@@ -14,7 +14,11 @@ const invoiceSchema = new mongoose.Schema({
     type: String,
     default: 'INR',
   },
-  
+  enableGST: {
+    type: Boolean,
+    default: true,
+  },
+
   // Reference to Proforma
   proformaInvoice: {
     type: mongoose.Schema.Types.ObjectId,

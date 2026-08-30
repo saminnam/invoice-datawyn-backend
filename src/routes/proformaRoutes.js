@@ -8,7 +8,8 @@ import {
   duplicateProformaInvoice,
   updateInvoiceStatus,
   downloadPDF,
-  convertToInvoice
+  convertToInvoice,
+  sendEmail
 } from '../controllers/proformaController.js'
 import { authMiddleware } from '../middleware/authMiddleware.js'
 import { requirePermission } from '../middleware/permissionMiddleware.js'
@@ -30,5 +31,6 @@ router.post('/:id/duplicate', requirePermission('proforma.create'), duplicatePro
 router.patch('/:id/status', requirePermission('proforma.edit'), updateInvoiceStatus)
 router.get('/:id/pdf', requirePermission('proforma.view'), downloadPDF)
 router.post('/:id/convert', requirePermission('proforma.convert'), convertToInvoice)
+router.post('/:id/send-email', requirePermission('proforma.edit'), sendEmail)
 
 export default router

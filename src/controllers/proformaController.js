@@ -4,6 +4,7 @@ import CompanySettings from '../models/CompanySettings.js'
 import { generateProformaInvoiceNumber } from '../utils/generateInvoiceNumber.js'
 import { CalculationService } from '../services/calculationService.js'
 import { PDFService } from '../services/pdfService.js'
+import { EmailService } from '../services/emailService.js'
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.js'
 
 export const getProformaInvoices = async (req, res, next) => {
@@ -364,6 +365,7 @@ export const convertToInvoice = async (req, res, next) => {
     const invoice = await Invoice.create({
       invoiceNumber,
       invoiceDate: new Date(),
+      enableGST: proformaInvoice.enableGST,
       proformaInvoice: proformaInvoice._id,
       customer: proformaInvoice.customer,
       customerSnapshot: proformaInvoice.customerSnapshot,
@@ -401,6 +403,22 @@ export const convertToInvoice = async (req, res, next) => {
     await proformaInvoice.save()
     
     successResponse(res, invoice, 'Invoice converted successfully', 201)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const sendEmail = async (req, res, next) => {
+  try {
+    const { email, emailType, message } = req.body
+    
+    if (!email) {
+      return errorResponse(res, 'Email is required')
+    }
+    
+    const result = await EmailService.sendProformaInvoice(req.params.id, { email, message })
+    
+    successResponse(res, null, result.message)
   } catch (error) {
     next(error)
   }

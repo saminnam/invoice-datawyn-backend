@@ -25,7 +25,59 @@ export class PDFService {
         const textColor = '#333333'
         
         // Add new header
-        this.addNewHeader(doc, companySettings, darkGrey, white)
+        this.addNewHeader(doc, companySettings, darkGrey, white, 'PROFORMA INVOICE')
+        
+        // Invoice details section
+        this.addInvoiceDetails(doc, invoice, textColor)
+        
+        // New table design
+        this.addNewTable(doc, invoice, lightGrey, mediumGrey, textColor)
+        
+        // Summary section with dark grey TOTAL box
+        this.addNewSummary(doc, invoice, darkGrey, white, textColor)
+        
+        // Total Due section
+        this.addTotalDue(doc, invoice, darkGrey, white, textColor)
+        
+        // Terms & Conditions
+        this.addTermsAndConditions(doc, invoice, textColor)
+        
+        // Signature section
+        const signatureEndY = this.addSignature(doc, invoice, companySettings, textColor)
+        
+        // Contact footer - positioned after signature with minimum spacing
+        this.addContactFooter(doc, companySettings, darkGrey, white, signatureEndY)
+        
+        doc.end()
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
+  static async generateInvoice(invoice, companySettings) {
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFKit({ 
+          margin: 40, 
+          size: 'A4',
+          bufferPages: true
+        })
+        const chunks = []
+        
+        doc.on('data', chunk => chunks.push(chunk))
+        doc.on('end', () => resolve(Buffer.concat(chunks)))
+        doc.on('error', reject)
+        
+        // New color scheme matching the design
+        const darkGrey = '#2d2d2d'
+        const lightGrey = '#f5f5f5'
+        const mediumGrey = '#e0e0e0'
+        const white = '#ffffff'
+        const textColor = '#333333'
+        
+        // Add new header
+        this.addNewHeader(doc, companySettings, darkGrey, white, 'TAX INVOICE')
         
         // Invoice details section
         this.addInvoiceDetails(doc, invoice, textColor)
@@ -55,7 +107,7 @@ export class PDFService {
     })
   }
   
-  static addNewHeader(doc, company, darkGrey, white) {
+  static addNewHeader(doc, company, darkGrey, white, invoiceType = 'INVOICE') {
     // Header background - dark grey
     doc.rect(0, 0, 595.28, 80).fill(darkGrey)
     
@@ -88,7 +140,7 @@ export class PDFService {
     doc.fillColor(white)
       .fontSize(36)
       .font('Helvetica-Bold')
-      .text('INVOICE', 450, 25, { align: 'right' })
+      .text(invoiceType, 450, 25, { align: 'right' })
   }
   
   static addInvoiceDetails(doc, invoice, textColor) {
@@ -150,7 +202,9 @@ export class PDFService {
   static addNewTable(doc, invoice, lightGrey, mediumGrey, textColor) {
     const tableTop = 240
     const rowHeight = 35
-    const colWidths = [50, 250, 80, 80, 80]
+    const enableGST = invoice.enableGST !== undefined ? invoice.enableGST : true
+    // Adjust column widths based on GST enabled/disabled
+    const colWidths = enableGST ? [50, 200, 60, 50, 60, 95] : [50, 280, 80, 80, 105]
     const items = invoice.items || []
     
     // Table header background - medium grey
@@ -162,7 +216,9 @@ export class PDFService {
       .fontSize(11)
       .font('Helvetica-Bold')
     
-    const headers = ['#', 'DESCRIPTION', 'PRICE', 'QUANTITY', 'AMOUNT']
+    const headers = enableGST 
+      ? ['#', 'DESCRIPTION', 'PRICE', 'QTY', 'GST %', 'AMOUNT']
+      : ['#', 'DESCRIPTION', 'PRICE', 'QTY', 'AMOUNT']
     let x = 50
     
     headers.forEach((header, i) => {
@@ -198,21 +254,27 @@ export class PDFService {
       
       // Description
       const desc = item.productSnapshot?.name || 'N/A'
-      doc.text(desc.substring(0, 40), x, y + 12)
+      doc.text(desc.substring(0, 35), x, y + 12)
       x += colWidths[1]
       
       // Price
-      doc.text(`$${item.rate.toFixed(2)}`, x, y + 12)
+      doc.text(`₹${item.rate.toFixed(2)}`, x, y + 12)
       x += colWidths[2]
       
       // Quantity
       doc.text(item.quantity.toString(), x, y + 12)
       x += colWidths[3]
       
+      // GST % (only if GST enabled)
+      if (enableGST) {
+        doc.text(`${item.gstRate}%`, x, y + 12)
+        x += colWidths[4]
+      }
+      
       // Amount
       doc.fillColor(textColor)
         .font('Helvetica-Bold')
-        .text(`$${item.total.toFixed(2)}`, x, y + 12)
+        .text(`₹${item.total.toFixed(2)}`, x, y + 12)
       
       y += rowHeight
     })
@@ -228,6 +290,7 @@ export class PDFService {
   static addNewSummary(doc, invoice, darkGrey, white, textColor) {
     const itemsLength = invoice.items ? invoice.items.length : 0
     const summaryY = 240 + (itemsLength * 35) + 20
+    const enableGST = invoice.enableGST !== undefined ? invoice.enableGST : true
     
     // Summary section on the right
     let y = summaryY
@@ -240,21 +303,64 @@ export class PDFService {
     
     doc.fillColor(textColor)
       .font('Helvetica-Bold')
-      .text(`$${invoice.subtotal.toFixed(2)}`, 500, y, { align: 'right' })
+      .text(`₹${invoice.subtotal.toFixed(2)}`, 500, y, { align: 'right' })
     
     y += 25
     
-    // Tax (5%)
-    const totalTax = invoice.cgst + invoice.sgst + invoice.igst
-    doc.fillColor('#666666')
-      .font('Helvetica')
-      .text('Tax (5%)', 350, y)
+    // Discount (if any)
+    const totalDiscount = (invoice.itemDiscount || 0) + (invoice.invoiceDiscount || 0)
+    if (totalDiscount > 0) {
+      doc.fillColor('#666666')
+        .font('Helvetica')
+        .text('Discount', 350, y)
+      
+      doc.fillColor('#dc2626')
+        .font('Helvetica-Bold')
+        .text(`-₹${totalDiscount.toFixed(2)}`, 500, y, { align: 'right' })
+      
+      y += 25
+    }
     
-    doc.fillColor(textColor)
-      .font('Helvetica-Bold')
-      .text(`$${totalTax.toFixed(2)}`, 500, y, { align: 'right' })
+    // Tax breakdown (only if GST enabled)
+    if (enableGST) {
+      if (invoice.cgst > 0) {
+        doc.fillColor('#666666')
+          .font('Helvetica')
+          .text('CGST', 350, y)
+        
+        doc.fillColor(textColor)
+          .font('Helvetica-Bold')
+          .text(`₹${invoice.cgst.toFixed(2)}`, 500, y, { align: 'right' })
+        
+        y += 25
+      }
+      
+      if (invoice.sgst > 0) {
+        doc.fillColor('#666666')
+          .font('Helvetica')
+          .text('SGST', 350, y)
+        
+        doc.fillColor(textColor)
+          .font('Helvetica-Bold')
+          .text(`₹${invoice.sgst.toFixed(2)}`, 500, y, { align: 'right' })
+        
+        y += 25
+      }
+      
+      if (invoice.igst > 0) {
+        doc.fillColor('#666666')
+          .font('Helvetica')
+          .text('IGST', 350, y)
+        
+        doc.fillColor(textColor)
+          .font('Helvetica-Bold')
+          .text(`₹${invoice.igst.toFixed(2)}`, 500, y, { align: 'right' })
+        
+        y += 25
+      }
+    }
     
-    y += 35
+    y += 10
     
     // TOTAL in dark grey box
     doc.rect(350, y, 205, 40)
@@ -265,7 +371,7 @@ export class PDFService {
       .font('Helvetica-Bold')
       .text('TOTAL', 370, y + 13)
     
-    doc.text(`$${invoice.grandTotal.toFixed(2)}`, 500, y + 13, { align: 'right' })
+    doc.text(`₹${invoice.grandTotal.toFixed(2)}`, 500, y + 13, { align: 'right' })
     
     return y + 50
   }
@@ -283,13 +389,15 @@ export class PDFService {
     doc.fillColor(darkGrey)
       .fontSize(24)
       .font('Helvetica-Bold')
-      .text(`$${invoice.grandTotal.toFixed(2)} USD`, 40, totalDueY + 20)
+      .text(`₹${invoice.grandTotal.toFixed(2)}`, 40, totalDueY + 20)
     
-    // Late charge notice
-    doc.fillColor('#666666')
-      .fontSize(10)
-      .font('Helvetica')
-      .text('Late charge for 10 days', 40, totalDueY + 50)
+    // Amount in words
+    if (invoice.amountInWords) {
+      doc.fillColor('#666666')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(`Amount in words: ${invoice.amountInWords}`, 40, totalDueY + 50)
+    }
     
     return totalDueY + 70
   }

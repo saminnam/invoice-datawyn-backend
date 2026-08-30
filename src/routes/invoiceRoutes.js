@@ -3,7 +3,8 @@ import {
   getInvoices,
   getInvoice,
   downloadInvoicePDF,
-  deleteInvoice
+  deleteInvoice,
+  sendEmail
 } from '../controllers/invoiceController.js'
 import { authMiddleware } from '../middleware/authMiddleware.js'
 import { requirePermission } from '../middleware/permissionMiddleware.js'
@@ -20,5 +21,6 @@ router.route('/:id')
   .delete(requirePermission('invoices.delete'), deleteInvoice)
 
 router.get('/:id/pdf', requirePermission('invoices.view'), downloadInvoicePDF)
+router.post('/:id/send-email', requirePermission('invoices.edit'), sendEmail)
 
 export default router
