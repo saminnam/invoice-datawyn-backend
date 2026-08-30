@@ -102,6 +102,8 @@ export const EmailService = {
 
   async sendInvoice(invoiceId, emailData) {
     try {
+      console.log('Starting email send for invoice:', invoiceId)
+      
       const invoice = await Invoice.findById(invoiceId)
         .populate('customer', 'companyName')
         .populate('proformaInvoice', 'invoiceNumber')
@@ -110,16 +112,21 @@ export const EmailService = {
         throw new Error('Invoice not found')
       }
 
+      console.log('Invoice found:', invoice.invoiceNumber)
       const companySettings = await CompanySettings.findOne()
+      console.log('Company settings found:', !!companySettings)
       
       // Generate PDF
+      console.log('Generating PDF...')
       const pdfBuffer = await PDFService.generateInvoice(invoice, companySettings)
+      console.log('PDF generated successfully, size:', pdfBuffer.length)
 
       const transporter = initializeTransporter()
       
       // Verify connection before sending
       try {
         await transporter.verify()
+        console.log('Email transporter verified successfully')
       } catch (verifyError) {
         console.error('Email transporter verification failed:', verifyError)
         throw new Error('Email service connection failed: ' + verifyError.message)
@@ -139,7 +146,7 @@ export const EmailService = {
               <li>Invoice Number: ${invoice.invoiceNumber}</li>
               <li>Date: ${new Date(invoice.invoiceDate).toLocaleDateString()}</li>
               ${invoice.proformaInvoice ? `<li>Proforma Reference: ${invoice.proformaInvoice.invoiceNumber}</li>` : ''}
-              <li>Total Amount: ₹${invoice.grandTotal.toFixed(2)}</li>
+              <li>Total Amount: ₹${(invoice.grandTotal || 0).toFixed(2)}</li>
             </ul>
             <p>${emailData.message || 'Please review the attached invoice and let us know if you have any questions.'}</p>
             <p>Best regards,<br>${companySettings?.companyName || 'Datawyn Technologies'}</p>
@@ -154,10 +161,19 @@ export const EmailService = {
         ]
       }
 
+      console.log('Sending email to:', emailData.email)
       await transporter.sendMail(mailOptions)
+      console.log('Email sent successfully')
       
       // Update invoice status to sent
       invoice.status = 'sent'
+      // Add to status history if the field exists
+      if (invoice.statusHistory) {
+        invoice.statusHistory.push({
+          status: 'sent',
+          changedAt: new Date()
+        })
+      }
       await invoice.save()
 
       return { success: true, message: 'Invoice sent successfully' }

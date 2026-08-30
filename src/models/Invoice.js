@@ -70,6 +70,7 @@ const invoiceSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   },
+  statusHistory: [mongoose.Schema.Types.Mixed],
 }, {
   timestamps: true,
 })

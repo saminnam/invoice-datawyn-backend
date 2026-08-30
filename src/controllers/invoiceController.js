@@ -78,8 +78,8 @@ export const downloadInvoicePDF = async (req, res, next) => {
     
     const companySettings = await CompanySettings.findOne()
     
-    // Use same PDF generation as proforma (invoice structure is similar)
-    const pdfBuffer = await PDFService.generateProformaInvoice(invoice, companySettings)
+    // Use generateInvoice for regular invoices
+    const pdfBuffer = await PDFService.generateInvoice(invoice, companySettings)
     
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoiceNumber}.pdf"`)
