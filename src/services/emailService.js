@@ -10,6 +10,10 @@ let transporter = null
 const initializeTransporter = () => {
   if (transporter) return transporter
 
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    throw new Error('Email credentials are missing from environment variables')
+  }
+
   const config = {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: process.env.EMAIL_PORT || 587,
@@ -17,7 +21,9 @@ const initializeTransporter = () => {
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
-    }
+    },
+    debug: process.env.NODE_ENV === 'development',
+    logger: process.env.NODE_ENV === 'development'
   }
 
   transporter = nodemailer.createTransport(config)
@@ -40,6 +46,14 @@ export const EmailService = {
       const pdfBuffer = await PDFService.generateProformaInvoice(invoice, companySettings)
 
       const transporter = initializeTransporter()
+      
+      // Verify connection before sending
+      try {
+        await transporter.verify()
+      } catch (verifyError) {
+        console.error('Email transporter verification failed:', verifyError)
+        throw new Error('Email service connection failed: ' + verifyError.message)
+      }
       
       const mailOptions = {
         from: process.env.EMAIL_FROM || companySettings?.email || 'noreply@datawyn.com',
@@ -102,6 +116,14 @@ export const EmailService = {
       const pdfBuffer = await PDFService.generateInvoice(invoice, companySettings)
 
       const transporter = initializeTransporter()
+      
+      // Verify connection before sending
+      try {
+        await transporter.verify()
+      } catch (verifyError) {
+        console.error('Email transporter verification failed:', verifyError)
+        throw new Error('Email service connection failed: ' + verifyError.message)
+      }
       
       const mailOptions = {
         from: process.env.EMAIL_FROM || companySettings?.email || 'noreply@datawyn.com',
