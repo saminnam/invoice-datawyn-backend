@@ -43,6 +43,24 @@ export const EmailService = {
       }
 
       console.log('Proforma invoice found:', invoice.invoiceNumber)
+      
+      // Ensure customerSnapshot exists, if not, create it from customer data
+      if (!invoice.customerSnapshot && invoice.customer) {
+        invoice.customerSnapshot = {
+          customerId: invoice.customer.customerId,
+          companyName: invoice.customer.companyName,
+          contactPerson: invoice.customer.contactPerson,
+          email: invoice.customer.email,
+          phone: invoice.customer.phone,
+          billingAddress: invoice.customer.billingAddress,
+          gstin: invoice.customer.gstin,
+          pan: invoice.customer.pan,
+          state: invoice.customer.billingAddress?.state,
+          stateCode: invoice.customer.billingAddress?.stateCode
+        }
+        console.log('Created customerSnapshot from customer data')
+      }
+      
       console.log('Proforma invoice data structure:', {
         hasCustomerSnapshot: !!invoice.customerSnapshot,
         hasItems: !!invoice.items && invoice.items.length > 0,
@@ -202,7 +220,7 @@ export const EmailService = {
       console.log('Starting email send for invoice:', invoiceId)
       
       const invoice = await Invoice.findById(invoiceId)
-        .populate('customer', 'companyName')
+        .populate('customer', 'companyName email phone billingAddress')
         .populate('proformaInvoice', 'invoiceNumber')
       
       if (!invoice) {
@@ -210,11 +228,28 @@ export const EmailService = {
       }
 
       console.log('Invoice found:', invoice.invoiceNumber)
+      
+      // Ensure customerSnapshot exists, if not, create it from customer data
+      if (!invoice.customerSnapshot && invoice.customer) {
+        invoice.customerSnapshot = {
+          customerId: invoice.customer.customerId,
+          companyName: invoice.customer.companyName,
+          contactPerson: invoice.customer.contactPerson,
+          email: invoice.customer.email,
+          phone: invoice.customer.phone,
+          billingAddress: invoice.customer.billingAddress,
+          gstin: invoice.customer.gstin,
+          pan: invoice.customer.pan,
+          state: invoice.customer.billingAddress?.state,
+          stateCode: invoice.customer.billingAddress?.stateCode
+        }
+        console.log('Created customerSnapshot from customer data')
+      }
+      
       console.log('Invoice data structure:', {
         hasCustomerSnapshot: !!invoice.customerSnapshot,
         hasItems: !!invoice.items && invoice.items.length > 0,
         itemsCount: invoice.items?.length,
-        hasCompanySettings: !!companySettings,
         customerSnapshot: invoice.customerSnapshot,
         invoiceItems: invoice.items?.map(item => ({
           hasProductSnapshot: !!item.productSnapshot,

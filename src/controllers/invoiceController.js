@@ -70,13 +70,31 @@ export const getInvoice = async (req, res, next) => {
 export const downloadInvoicePDF = async (req, res, next) => {
   try {
     const invoice = await Invoice.findById(req.params.id)
-      .populate('customer', 'companyName')
+      .populate('customer', 'companyName email phone billingAddress gstin pan')
     
     if (!invoice) {
       return errorResponse(res, 'Invoice not found', [], 404)
     }
     
     console.log('Download PDF - Invoice found:', invoice.invoiceNumber)
+    
+    // Ensure customerSnapshot exists, if not, create it from customer data
+    if (!invoice.customerSnapshot && invoice.customer) {
+      invoice.customerSnapshot = {
+        customerId: invoice.customer.customerId,
+        companyName: invoice.customer.companyName,
+        contactPerson: invoice.customer.contactPerson,
+        email: invoice.customer.email,
+        phone: invoice.customer.phone,
+        billingAddress: invoice.customer.billingAddress,
+        gstin: invoice.customer.gstin,
+        pan: invoice.customer.pan,
+        state: invoice.customer.billingAddress?.state,
+        stateCode: invoice.customer.billingAddress?.stateCode
+      }
+      console.log('Download PDF - Created customerSnapshot from customer data')
+    }
+    
     console.log('Download PDF - Invoice data structure:', {
       hasCustomerSnapshot: !!invoice.customerSnapshot,
       hasItems: !!invoice.items && invoice.items.length > 0,
