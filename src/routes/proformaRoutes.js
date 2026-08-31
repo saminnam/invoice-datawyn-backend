@@ -14,7 +14,7 @@ import {
 } from '../controllers/proformaController.js'
 import { authMiddleware } from '../middleware/authMiddleware.js'
 import { requirePermission } from '../middleware/permissionMiddleware.js'
-import { upload } from '../app.js'
+import upload from '../config/multer.js'
 
 const router = express.Router()
 
