@@ -423,3 +423,38 @@ export const sendEmail = async (req, res, next) => {
     next(error)
   }
 }
+
+export const sendEmailWithPDF = async (req, res, next) => {
+  try {
+    const { email, message } = req.body
+    
+    if (!email) {
+      return errorResponse(res, 'Email is required')
+    }
+    
+    if (!req.file) {
+      return errorResponse(res, 'PDF file is required')
+    }
+    
+    const invoice = await ProformaInvoice.findById(req.params.id)
+      .populate('customer', 'companyName')
+    
+    if (!invoice) {
+      return errorResponse(res, 'Invoice not found', [], 404)
+    }
+    
+    const companySettings = await CompanySettings.findOne()
+    
+    const result = await EmailService.sendProformaInvoiceWithCustomPDF(req.params.id, {
+      email,
+      message,
+      pdfBuffer: req.file.buffer,
+      invoice,
+      companySettings
+    })
+    
+    successResponse(res, null, result.message)
+  } catch (error) {
+    next(error)
+  }
+}

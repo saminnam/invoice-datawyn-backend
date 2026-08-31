@@ -9,10 +9,12 @@ import {
   updateInvoiceStatus,
   downloadPDF,
   convertToInvoice,
-  sendEmail
+  sendEmail,
+  sendEmailWithPDF
 } from '../controllers/proformaController.js'
 import { authMiddleware } from '../middleware/authMiddleware.js'
 import { requirePermission } from '../middleware/permissionMiddleware.js'
+import { upload } from '../app.js'
 
 const router = express.Router()
 
@@ -32,5 +34,6 @@ router.patch('/:id/status', requirePermission('proforma.edit'), updateInvoiceSta
 router.get('/:id/pdf', requirePermission('proforma.view'), downloadPDF)
 router.post('/:id/convert', requirePermission('proforma.convert'), convertToInvoice)
 router.post('/:id/send-email', requirePermission('proforma.edit'), sendEmail)
+router.post('/:id/send-email-pdf', upload.single('pdf'), requirePermission('proforma.edit'), sendEmailWithPDF)
 
 export default router

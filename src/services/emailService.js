@@ -416,5 +416,277 @@ export const EmailService = {
     } catch (error) {
       throw new Error('Email connection test failed: ' + error.message)
     }
+  },
+
+  async sendInvoiceWithCustomPDF(invoiceId, { email, message, pdfBuffer, invoice, companySettings }) {
+    try {
+      console.log('Sending invoice with custom PDF:', invoiceId)
+      
+      const transporter = initializeTransporter()
+      
+      // Verify connection before sending
+      try {
+        await transporter.verify()
+        console.log('Email transporter verified successfully')
+      } catch (verifyError) {
+        console.error('Email transporter verification failed:', verifyError)
+        throw new Error('Email service connection failed: ' + verifyError.message)
+      }
+      
+      const mailOptions = {
+        from: process.env.EMAIL_FROM || companySettings?.email || 'noreply@datawyn.com',
+        to: email,
+        subject: `Invoice ${invoice.invoiceNumber} from ${companySettings?.companyName || 'Datawyn Technologies'}`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+              .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+              .header { background: linear-gradient(135deg, #2d2d2d 0%, #4a4a4a 100%); padding: 30px; text-align: center; }
+              .header h1 { color: #ffffff; margin: 0; font-size: 28px; font-weight: 600; }
+              .header .subtitle { color: #cccccc; margin-top: 10px; font-size: 14px; }
+              .content { padding: 30px; }
+              .greeting { color: #333333; font-size: 16px; margin-bottom: 20px; }
+              .invoice-box { background-color: #f9f9f9; border-left: 4px solid #2d2d2d; padding: 20px; margin: 20px 0; border-radius: 4px; }
+              .invoice-box h3 { color: #2d2d2d; margin: 0 0 15px 0; font-size: 18px; }
+              .invoice-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+              .detail-item { color: #666666; font-size: 14px; }
+              .detail-item strong { color: #333333; }
+              .total-amount { background-color: #2d2d2d; color: #ffffff; padding: 15px; text-align: center; border-radius: 4px; margin-top: 20px; }
+              .total-amount .label { font-size: 14px; opacity: 0.9; }
+              .total-amount .amount { font-size: 24px; font-weight: bold; margin-top: 5px; }
+              .message { color: #666666; font-size: 14px; line-height: 1.6; margin: 20px 0; font-style: italic; }
+              .footer { background-color: #2d2d2d; color: #ffffff; padding: 20px; text-align: center; font-size: 12px; }
+              .footer a { color: #ffffff; text-decoration: none; }
+              .attachment-notice { background-color: #e8f4f8; border: 1px solid #b8daff; color: #004085; padding: 15px; border-radius: 4px; margin: 20px 0; text-align: center; }
+              .attachment-notice strong { display: block; margin-bottom: 5px; }
+              .proforma-ref { background-color: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 10px; border-radius: 4px; margin: 15px 0; text-align: center; font-size: 13px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>TAX INVOICE</h1>
+                <div class="subtitle">${companySettings?.companyName || 'Datawyn Technologies'}</div>
+              </div>
+              
+              <div class="content">
+                <p class="greeting">Dear ${invoice.customerSnapshot?.contactPerson || 'Valued Customer'},</p>
+                
+                <p style="color: #333333; font-size: 15px; line-height: 1.6;">
+                  Please find attached the tax invoice <strong>${invoice.invoiceNumber}</strong> for your records.
+                </p>
+                
+                ${invoice.proformaInvoice ? `<div class="proforma-ref">📋 Reference: Proforma Invoice ${invoice.proformaInvoice.invoiceNumber}</div>` : ''}
+                
+                <div class="invoice-box">
+                  <h3>📋 Invoice Details</h3>
+                  <div class="invoice-details">
+                    <div class="detail-item"><strong>Invoice No:</strong> ${invoice.invoiceNumber}</div>
+                    <div class="detail-item"><strong>Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                    <div class="detail-item"><strong>Payment Method:</strong> ${invoice.paymentMethod || 'Bank Transfer'}</div>
+                    <div class="detail-item"><strong>Due Date:</strong> ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</div>
+                  </div>
+                  
+                  <div class="total-amount">
+                    <div class="label">Total Amount</div>
+                    <div class="amount">₹${(invoice.grandTotal || 0).toFixed(2)}</div>
+                  </div>
+                </div>
+                
+                <div class="attachment-notice">
+                  <strong>📎 PDF Invoice Attached</strong>
+                  The detailed invoice PDF is attached to this email for your records.
+                </div>
+                
+                ${message ? `<div class="message">"${message}"</div>` : ''}
+                
+                <p style="color: #666666; font-size: 14px; line-height: 1.6; margin-top: 25px;">
+                  Please review the attached invoice and let us know if you have any questions.
+                </p>
+                
+                <p style="color: #333333; font-size: 15px; margin-top: 20px;">
+                  Best regards,<br>
+                  <strong>${companySettings?.companyName || 'Datawyn Technologies'}</strong>
+                </p>
+              </div>
+              
+              <div class="footer">
+                <p>${companySettings?.companyName || 'Datawyn Technologies'}</p>
+                ${companySettings?.address ? `<p>${[companySettings.address.street, companySettings.address.city, companySettings.address.state].filter(Boolean).join(', ')}</p>` : ''}
+                ${companySettings?.phone ? `<p>📞 ${companySettings.phone}</p>` : ''}
+                ${companySettings?.email ? `<p>✉️ ${companySettings.email}</p>` : ''}
+                ${companySettings?.website ? `<p>🌐 <a href="https://${companySettings.website}">${companySettings.website}</a></p>` : ''}
+              </div>
+            </div>
+          </body>
+          </html>
+        `,
+        attachments: [
+          {
+            filename: `${invoice.invoiceNumber}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf'
+          }
+        ]
+      }
+
+      console.log('Sending email to:', email)
+      await transporter.sendMail(mailOptions)
+      console.log('Email sent successfully')
+      
+      // Update invoice status to sent
+      invoice.status = 'sent'
+      // Add to status history if the field exists
+      if (invoice.statusHistory) {
+        invoice.statusHistory.push({
+          status: 'sent',
+          changedAt: new Date()
+        })
+      }
+      await invoice.save()
+
+      return { success: true, message: 'Invoice sent successfully' }
+    } catch (error) {
+      console.error('Email sending error:', error)
+      throw new Error('Failed to send email: ' + error.message)
+    }
+  },
+
+  async sendProformaInvoiceWithCustomPDF(invoiceId, { email, message, pdfBuffer, invoice, companySettings }) {
+    try {
+      console.log('Sending proforma invoice with custom PDF:', invoiceId)
+      
+      const transporter = initializeTransporter()
+      
+      // Verify connection before sending
+      try {
+        await transporter.verify()
+        console.log('Email transporter verified successfully')
+      } catch (verifyError) {
+        console.error('Email transporter verification failed:', verifyError)
+        throw new Error('Email service connection failed: ' + verifyError.message)
+      }
+      
+      const mailOptions = {
+        from: process.env.EMAIL_FROM || companySettings?.email || 'noreply@datawyn.com',
+        to: email,
+        subject: `Proforma Invoice ${invoice.invoiceNumber} from ${companySettings?.companyName || 'Datawyn Technologies'}`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+              .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+              .header { background: linear-gradient(135deg, #2d2d2d 0%, #4a4a4a 100%); padding: 30px; text-align: center; }
+              .header h1 { color: #ffffff; margin: 0; font-size: 28px; font-weight: 600; }
+              .header .subtitle { color: #cccccc; margin-top: 10px; font-size: 14px; }
+              .content { padding: 30px; }
+              .greeting { color: #333333; font-size: 16px; margin-bottom: 20px; }
+              .invoice-box { background-color: #f9f9f9; border-left: 4px solid #2d2d2d; padding: 20px; margin: 20px 0; border-radius: 4px; }
+              .invoice-box h3 { color: #2d2d2d; margin: 0 0 15px 0; font-size: 18px; }
+              .invoice-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+              .detail-item { color: #666666; font-size: 14px; }
+              .detail-item strong { color: #333333; }
+              .total-amount { background-color: #2d2d2d; color: #ffffff; padding: 15px; text-align: center; border-radius: 4px; margin-top: 20px; }
+              .total-amount .label { font-size: 14px; opacity: 0.9; }
+              .total-amount .amount { font-size: 24px; font-weight: bold; margin-top: 5px; }
+              .message { color: #666666; font-size: 14px; line-height: 1.6; margin: 20px 0; font-style: italic; }
+              .footer { background-color: #2d2d2d; color: #ffffff; padding: 20px; text-align: center; font-size: 12px; }
+              .footer a { color: #ffffff; text-decoration: none; }
+              .attachment-notice { background-color: #e8f4f8; border: 1px solid #b8daff; color: #004085; padding: 15px; border-radius: 4px; margin: 20px 0; text-align: center; }
+              .attachment-notice strong { display: block; margin-bottom: 5px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>PROFORMA INVOICE</h1>
+                <div class="subtitle">${companySettings?.companyName || 'Datawyn Technologies'}</div>
+              </div>
+              
+              <div class="content">
+                <p class="greeting">Dear ${invoice.customerSnapshot?.contactPerson || 'Valued Customer'},</p>
+                
+                <p style="color: #333333; font-size: 15px; line-height: 1.6;">
+                  Please find attached the proforma invoice <strong>${invoice.invoiceNumber}</strong> for your review.
+                </p>
+                
+                <div class="invoice-box">
+                  <h3>📋 Invoice Details</h3>
+                  <div class="invoice-details">
+                    <div class="detail-item"><strong>Invoice No:</strong> ${invoice.invoiceNumber}</div>
+                    <div class="detail-item"><strong>Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                    <div class="detail-item"><strong>Valid Until:</strong> ${invoice.validUntil ? new Date(invoice.validUntil).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</div>
+                    <div class="detail-item"><strong>Payment Method:</strong> ${invoice.paymentMethod || 'Bank Transfer'}</div>
+                  </div>
+                  
+                  <div class="total-amount">
+                    <div class="label">Total Amount</div>
+                    <div class="amount">₹${(invoice.grandTotal || 0).toFixed(2)}</div>
+                  </div>
+                </div>
+                
+                <div class="attachment-notice">
+                  <strong>📎 PDF Invoice Attached</strong>
+                  The detailed invoice PDF is attached to this email for your records.
+                </div>
+                
+                ${message ? `<div class="message">"${message}"</div>` : ''}
+                
+                <p style="color: #666666; font-size: 14px; line-height: 1.6; margin-top: 25px;">
+                  Please review the attached invoice and let us know if you have any questions or require any modifications.
+                </p>
+                
+                <p style="color: #333333; font-size: 15px; margin-top: 20px;">
+                  Best regards,<br>
+                  <strong>${companySettings?.companyName || 'Datawyn Technologies'}</strong>
+                </p>
+              </div>
+              
+              <div class="footer">
+                <p>${companySettings?.companyName || 'Datawyn Technologies'}</p>
+                ${companySettings?.address ? `<p>${[companySettings.address.street, companySettings.address.city, companySettings.address.state].filter(Boolean).join(', ')}</p>` : ''}
+                ${companySettings?.phone ? `<p>📞 ${companySettings.phone}</p>` : ''}
+                ${companySettings?.email ? `<p>✉️ ${companySettings.email}</p>` : ''}
+                ${companySettings?.website ? `<p>🌐 <a href="https://${companySettings.website}">${companySettings.website}</a></p>` : ''}
+              </div>
+            </div>
+          </body>
+          </html>
+        `,
+        attachments: [
+          {
+            filename: `${invoice.invoiceNumber}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf'
+          }
+        ]
+      }
+
+      console.log('Sending email to:', email)
+      await transporter.sendMail(mailOptions)
+      console.log('Email sent successfully')
+      
+      // Update invoice status to sent
+      invoice.status = 'sent'
+      invoice.statusHistory.push({
+        status: 'sent',
+        changedAt: new Date()
+      })
+      await invoice.save()
+
+      return { success: true, message: 'Invoice sent successfully' }
+    } catch (error) {
+      console.error('Email sending error:', error)
+      throw new Error('Failed to send email: ' + error.message)
+    }
   }
 }
