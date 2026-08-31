@@ -24,38 +24,40 @@ export class PDFService {
         const white = '#ffffff'
         const textColor = '#333333'
         
+        let currentY = 0
+        
         // Add new header
-        this.addNewHeader(doc, companySettings, darkGrey, white, 'PROFORMA INVOICE')
+        currentY = this.addNewHeader(doc, companySettings, darkGrey, white, 'PROFORMA INVOICE', currentY)
         
         // Invoice details section
-        this.addInvoiceDetails(doc, invoice, textColor)
+        currentY = this.addInvoiceDetails(doc, invoice, textColor, currentY)
         
         // New table design
-        this.addNewTable(doc, invoice, lightGrey, mediumGrey, textColor)
+        currentY = this.addNewTable(doc, invoice, lightGrey, mediumGrey, textColor, currentY)
         
         // Summary section with dark grey TOTAL box
-        this.addNewSummary(doc, invoice, darkGrey, white, textColor)
+        currentY = this.addNewSummary(doc, invoice, darkGrey, white, textColor, currentY)
         
         // Amount in words section
-        this.addAmountInWords(doc, invoice, textColor)
+        currentY = this.addAmountInWords(doc, invoice, textColor, currentY)
         
         // Payment Terms
-        this.addPaymentTerms(doc, invoice, textColor)
+        currentY = this.addPaymentTerms(doc, invoice, textColor, currentY)
         
         // Notes
-        this.addNotes(doc, invoice, textColor)
+        currentY = this.addNotes(doc, invoice, textColor, currentY)
         
         // Terms & Conditions
-        this.addTermsAndConditions(doc, invoice, textColor)
+        currentY = this.addTermsAndConditions(doc, invoice, textColor, currentY)
         
         // Bank Details
-        this.addBankDetails(doc, companySettings, textColor)
+        currentY = this.addBankDetails(doc, companySettings, textColor, currentY)
         
         // Signature section
-        const signatureEndY = this.addSignature(doc, invoice, companySettings, textColor)
+        currentY = this.addSignature(doc, invoice, companySettings, textColor, currentY)
         
         // Contact footer - positioned after signature with minimum spacing
-        this.addContactFooter(doc, companySettings, darkGrey, white, signatureEndY)
+        this.addContactFooter(doc, companySettings, darkGrey, white, currentY)
         
         doc.end()
       } catch (error) {
@@ -85,38 +87,40 @@ export class PDFService {
         const white = '#ffffff'
         const textColor = '#333333'
         
+        let currentY = 0
+        
         // Add new header
-        this.addNewHeader(doc, companySettings, darkGrey, white, 'TAX INVOICE')
+        currentY = this.addNewHeader(doc, companySettings, darkGrey, white, 'TAX INVOICE', currentY)
         
         // Invoice details section
-        this.addInvoiceDetails(doc, invoice, textColor)
+        currentY = this.addInvoiceDetails(doc, invoice, textColor, currentY)
         
         // New table design
-        this.addNewTable(doc, invoice, lightGrey, mediumGrey, textColor)
+        currentY = this.addNewTable(doc, invoice, lightGrey, mediumGrey, textColor, currentY)
         
         // Summary section with dark grey TOTAL box
-        this.addNewSummary(doc, invoice, darkGrey, white, textColor)
+        currentY = this.addNewSummary(doc, invoice, darkGrey, white, textColor, currentY)
         
         // Amount in words section
-        this.addAmountInWords(doc, invoice, textColor)
+        currentY = this.addAmountInWords(doc, invoice, textColor, currentY)
         
         // Payment Terms
-        this.addPaymentTerms(doc, invoice, textColor)
+        currentY = this.addPaymentTerms(doc, invoice, textColor, currentY)
         
         // Notes
-        this.addNotes(doc, invoice, textColor)
+        currentY = this.addNotes(doc, invoice, textColor, currentY)
         
         // Terms & Conditions
-        this.addTermsAndConditions(doc, invoice, textColor)
+        currentY = this.addTermsAndConditions(doc, invoice, textColor, currentY)
         
         // Bank Details
-        this.addBankDetails(doc, companySettings, textColor)
+        currentY = this.addBankDetails(doc, companySettings, textColor, currentY)
         
         // Signature section
-        const signatureEndY = this.addSignature(doc, invoice, companySettings, textColor)
+        currentY = this.addSignature(doc, invoice, companySettings, textColor, currentY)
         
         // Contact footer - positioned after signature with minimum spacing
-        this.addContactFooter(doc, companySettings, darkGrey, white, signatureEndY)
+        this.addContactFooter(doc, companySettings, darkGrey, white, currentY)
         
         doc.end()
       } catch (error) {
@@ -125,9 +129,11 @@ export class PDFService {
     })
   }
   
-  static addNewHeader(doc, company, darkGrey, white, invoiceType = 'INVOICE') {
+  static addNewHeader(doc, company, darkGrey, white, invoiceType = 'INVOICE', startY = 0) {
     // Handle missing company settings
     const safeCompany = company || {}
+    
+    const headerY = startY + 40
     
     // Logo on left side with border
     if (safeCompany.logo) {
@@ -146,17 +152,17 @@ export class PDFService {
         
         if (logoPath && fs.existsSync(logoPath)) {
           // Draw border around logo
-          doc.rect(40, 40, 80, 80)
+          doc.rect(40, headerY, 80, 80)
             .lineWidth(1)
             .stroke('#e0e0e0')
-          doc.image(logoPath, 45, 45, { width: 70, height: 70 })
+          doc.image(logoPath, 45, headerY + 5, { width: 70, height: 70 })
         } else {
           console.log('Logo file not found at path:', logoPath)
           // Fallback: Company name as text
           doc.fillColor('#333333')
             .fontSize(18)
             .font('Helvetica-Bold')
-            .text(safeCompany.companyName || 'Datawyn Technologies', 40, 50)
+            .text(safeCompany.companyName || 'Datawyn Technologies', 40, headerY + 10)
         }
       } catch (error) {
         console.log('Could not load logo:', error)
@@ -164,28 +170,28 @@ export class PDFService {
         doc.fillColor('#333333')
           .fontSize(18)
           .font('Helvetica-Bold')
-          .text(safeCompany.companyName || 'Datawyn Technologies', 40, 50)
+          .text(safeCompany.companyName || 'Datawyn Technologies', 40, headerY + 10)
       }
     } else {
       // Fallback: Company name as text when no logo
       doc.fillColor('#333333')
         .fontSize(18)
         .font('Helvetica-Bold')
-        .text(safeCompany.companyName || 'Datawyn Technologies', 40, 50)
+        .text(safeCompany.companyName || 'Datawyn Technologies', 40, headerY + 10)
     }
     
     // Company name and address details
-    let y = 50
+    let y = headerY + 10
     if (!safeCompany.logo || (safeCompany.logo && !fs.existsSync(path.join(process.cwd(), 'uploads', safeCompany.logo.replace('/uploads/', ''))))) {
-      y = 80
+      y = headerY + 40
     }
     
     doc.fillColor('#333333')
       .fontSize(22)
       .font('Helvetica-Bold')
-      .text(safeCompany.companyName || 'Datawyn Technologies', 130, 40)
+      .text(safeCompany.companyName || 'Datawyn Technologies', 130, headerY)
     
-    y = 70
+    y = headerY + 30
     const address = safeCompany.address || {}
     if (address.street) {
       doc.fillColor('#666666')
@@ -224,36 +230,40 @@ export class PDFService {
     }
     
     // INVOICE text on right side with black background
-    doc.rect(450, 40, 105, 40)
+    doc.rect(450, headerY, 105, 40)
       .fill('#000000')
     
     doc.fillColor('#ffffff')
       .fontSize(16)
       .font('Helvetica-Bold')
-      .text(invoiceType, 450, 55, { width: 105, align: 'center' })
+      .text(invoiceType, 450, headerY + 15, { width: 105, align: 'center' })
     
     // Invoice number below
-    doc.rect(450, 85, 105, 35)
+    doc.rect(450, headerY + 45, 105, 35)
       .lineWidth(1)
       .stroke('#e0e0e0')
     
     doc.fillColor('#333333')
       .fontSize(12)
       .font('Helvetica-Bold')
-      .text('Invoice No', 455, 92)
+      .text('Invoice No', 455, headerY + 52)
+    
+    return headerY + 90
   }
   
-  static addInvoiceDetails(doc, invoice, textColor) {
+  static addInvoiceDetails(doc, invoice, textColor, startY = 0) {
     const customer = invoice.customerSnapshot || {}
+    
+    const detailsY = startY + 10
     
     // Add invoice number to the header box
     doc.fillColor('#333333')
       .fontSize(12)
       .font('Helvetica-Bold')
-      .text(invoice.invoiceNumber || 'N/A', 455, 105, { width: 100, align: 'center' })
+      .text(invoice.invoiceNumber || 'N/A', 455, startY - 35, { width: 100, align: 'center' })
     
     // Invoice details section - two column layout
-    let y = 140
+    let y = detailsY + 40
     
     // Left column - Invoice Details
     doc.fillColor('#666666')
@@ -305,7 +315,7 @@ export class PDFService {
       .text(invoice.status ? invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1) : 'N/A', 120, y)
     
     // Right column - Bill To
-    y = 140
+    y = detailsY + 40
     const billToX = 320
     
     doc.fillColor('#666666')
@@ -374,11 +384,13 @@ export class PDFService {
         .font('Helvetica')
         .text(`GSTIN: ${customer.gstin}`, billToX, y)
     }
+    
+    return y + 20
   }
   
   
-  static addNewTable(doc, invoice, lightGrey, mediumGrey, textColor) {
-    const tableTop = 270
+  static addNewTable(doc, invoice, lightGrey, mediumGrey, textColor, startY = 0) {
+    const tableTop = startY + 20
     const rowHeight = 35
     const enableGST = invoice.enableGST !== undefined ? invoice.enableGST : true
     // Adjust column widths based on GST enabled/disabled - matching CRM UI
@@ -408,11 +420,7 @@ export class PDFService {
     let x = 50
     
     headers.forEach((header, i) => {
-      if (i === 0) {
-        doc.text(header, x, tableTop + 12)
-      } else {
-        doc.text(header, x, tableTop + 12)
-      }
+      doc.text(header, x, tableTop + 12)
       x += colWidths[i]
     })
     
@@ -482,12 +490,10 @@ export class PDFService {
       .lineWidth(1)
       .stroke('#e5e7eb')
     
-    return y
+    return y + 10
   }
   
-  static addNewSummary(doc, invoice, darkGrey, white, textColor) {
-    const itemsLength = invoice.items ? invoice.items.length : 0
-    const summaryY = 270 + (itemsLength * 35) + 20
+  static addNewSummary(doc, invoice, darkGrey, white, textColor, startY = 0) {
     const enableGST = invoice.enableGST !== undefined ? invoice.enableGST : true
     
     // Handle missing financial values with defaults
@@ -500,7 +506,7 @@ export class PDFService {
     const grandTotal = parseFloat(invoice.grandTotal) || 0
     
     // Summary section on the right - matching CRM UI
-    let y = summaryY
+    let y = startY + 20
     const summaryX = 350
     
     // Sub Total
@@ -591,9 +597,8 @@ export class PDFService {
     return y + 30
   }
   
-  static addAmountInWords(doc, invoice, textColor) {
-    const itemsLength = invoice.items ? invoice.items.length : 0
-    const amountWordsY = 270 + (itemsLength * 35) + 100
+  static addAmountInWords(doc, invoice, textColor, startY = 0) {
+    const amountWordsY = startY + 20
     
     // Amount in words section - matching CRM UI with grey background
     doc.rect(40, amountWordsY, 515, 40)
@@ -617,9 +622,8 @@ export class PDFService {
     return amountWordsY + 50
   }
   
-  static addPaymentTerms(doc, invoice, textColor) {
-    const itemsLength = invoice.items ? invoice.items.length : 0
-    const paymentTermsY = 270 + (itemsLength * 35) + 150
+  static addPaymentTerms(doc, invoice, textColor, startY = 0) {
+    const paymentTermsY = startY + 10
     
     if (invoice.paymentTerms) {
       doc.fillColor('#6b7280')
@@ -637,9 +641,8 @@ export class PDFService {
     return paymentTermsY
   }
   
-  static addNotes(doc, invoice, textColor) {
-    const itemsLength = invoice.items ? invoice.items.length : 0
-    const notesY = 270 + (itemsLength * 35) + 180
+  static addNotes(doc, invoice, textColor, startY = 0) {
+    const notesY = startY + 10
     
     if (invoice.notes) {
       doc.fillColor('#6b7280')
@@ -657,9 +660,8 @@ export class PDFService {
     return notesY
   }
   
-  static addBankDetails(doc, company, textColor) {
-    const itemsLength = 0 // Will be calculated dynamically
-    const bankY = 270 + (itemsLength * 35) + 210
+  static addBankDetails(doc, company, textColor, startY = 0) {
+    const bankY = startY + 10
     
     const safeCompany = company || {}
     const bankDetails = safeCompany.bankDetails || {}
@@ -747,9 +749,8 @@ export class PDFService {
     return bankY
   }
   
-  static addTermsAndConditions(doc, invoice, textColor) {
-    const itemsLength = invoice.items ? invoice.items.length : 0
-    const termsY = 270 + (itemsLength * 35) + 320
+  static addTermsAndConditions(doc, invoice, textColor, startY = 0) {
+    const termsY = startY + 10
     
     if (invoice.termsAndConditions) {
       doc.fillColor('#6b7280')
@@ -777,9 +778,8 @@ export class PDFService {
     return termsY
   }
   
-  static addSignature(doc, invoice, company, textColor) {
-    const itemsLength = invoice.items ? invoice.items.length : 0
-    const signatureY = 270 + (itemsLength * 35) + 400
+  static addSignature(doc, invoice, company, textColor, startY = 0) {
+    const signatureY = startY + 20
     
     // Handle missing company settings
     const safeCompany = company || {}
@@ -865,9 +865,9 @@ export class PDFService {
     return Math.min(currentY + 30, 730)
   }
   
-  static addContactFooter(doc, company, darkGrey, white, signatureEndY = 750) {
+  static addContactFooter(doc, company, darkGrey, white, startY = 750) {
     // Footer background - position based on content or default
-    const footerY = Math.max(signatureEndY + 10, 750)
+    const footerY = Math.max(startY + 10, 750)
     doc.rect(0, footerY, 595.28, 40)
       .fill('#f9fafb')
     
