@@ -9,7 +9,7 @@ import {
 } from '../controllers/invoiceController.js'
 import { authMiddleware } from '../middleware/authMiddleware.js'
 import { requirePermission } from '../middleware/permissionMiddleware.js'
-import upload from '../config/multer.js'
+import { upload } from '../app.js'
 
 const router = express.Router()
 
