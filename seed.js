@@ -60,7 +60,7 @@ const seed = async () => {
         legacyRole: 'admin',
         isActive: true
       })
-      console.log('Created admin user with  role')
+      console.log('Created admin user with Admin role')
     }
 
     // Update all existing users to have admin role if they don't have a role
