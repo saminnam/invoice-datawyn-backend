@@ -30,7 +30,7 @@ export class PDFService {
         currentY = this.addNewHeader(doc, companySettings, darkGrey, white, 'PROFORMA INVOICE', currentY)
         
         // Invoice details section
-        currentY = this.addInvoiceDetails(doc, invoice, textColor, currentY)
+        currentY = this.addInvoiceDetails(doc, invoice, textColor, currentY - 35)
         
         // New table design
         currentY = this.addNewTable(doc, invoice, lightGrey, mediumGrey, textColor, currentY)
@@ -93,7 +93,7 @@ export class PDFService {
         currentY = this.addNewHeader(doc, companySettings, darkGrey, white, 'TAX INVOICE', currentY)
         
         // Invoice details section
-        currentY = this.addInvoiceDetails(doc, invoice, textColor, currentY)
+        currentY = this.addInvoiceDetails(doc, invoice, textColor, currentY - 35)
         
         // New table design
         currentY = this.addNewTable(doc, invoice, lightGrey, mediumGrey, textColor, currentY)
@@ -135,7 +135,8 @@ export class PDFService {
     
     const headerY = startY + 40
     
-    // Logo on left side with border
+    // Logo on left side with border - improved handling
+    let logoLoaded = false
     if (safeCompany.logo) {
       try {
         let logoPath
@@ -151,104 +152,104 @@ export class PDFService {
         }
         
         if (logoPath && fs.existsSync(logoPath)) {
-          // Draw border around logo
-          doc.rect(40, headerY, 80, 80)
-            .lineWidth(1)
-            .stroke('#e0e0e0')
-          doc.image(logoPath, 45, headerY + 5, { width: 70, height: 70 })
+          // Draw border around logo with better styling
+          doc.rect(40, headerY, 90, 90)
+            .lineWidth(1.5)
+            .stroke('#d1d5db')
+          
+          // Add logo with better fit
+          doc.image(logoPath, 45, headerY + 5, { 
+            width: 80, 
+            height: 80,
+            fit: [80, 80],
+            align: 'center',
+            valign: 'center'
+          })
+          logoLoaded = true
         } else {
           console.log('Logo file not found at path:', logoPath)
-          // Fallback: Company name as text
-          doc.fillColor('#333333')
-            .fontSize(18)
-            .font('Helvetica-Bold')
-            .text(safeCompany.companyName || 'Datawyn Technologies', 40, headerY + 10)
         }
       } catch (error) {
         console.log('Could not load logo:', error)
-        // Fallback: Company name as text
-        doc.fillColor('#333333')
-          .fontSize(18)
-          .font('Helvetica-Bold')
-          .text(safeCompany.companyName || 'Datawyn Technologies', 40, headerY + 10)
       }
-    } else {
-      // Fallback: Company name as text when no logo
-      doc.fillColor('#333333')
-        .fontSize(18)
-        .font('Helvetica-Bold')
-        .text(safeCompany.companyName || 'Datawyn Technologies', 40, headerY + 10)
     }
     
-    // Company name and address details
+    // Company name and address details - improved spacing and typography
     let y = headerY + 10
-    if (!safeCompany.logo || (safeCompany.logo && !fs.existsSync(path.join(process.cwd(), 'uploads', safeCompany.logo.replace('/uploads/', ''))))) {
-      y = headerY + 40
+    if (!logoLoaded) {
+      y = headerY + 20
     }
     
-    doc.fillColor('#333333')
-      .fontSize(22)
+    // Company name - larger and more prominent with better color
+    doc.fillColor('#111827')
+      .fontSize(26)
       .font('Helvetica-Bold')
-      .text(safeCompany.companyName || 'Datawyn Technologies', 130, headerY)
+      .text(safeCompany.companyName || 'Datawyn Technologies', logoLoaded ? 145 : 40, y)
     
-    y = headerY + 30
+    y += 35
+    
+    // Address details with better formatting
     const address = safeCompany.address || {}
     if (address.street) {
-      doc.fillColor('#666666')
-        .fontSize(10)
+      doc.fillColor('#4b5563')
+        .fontSize(11)
         .font('Helvetica')
-        .text(address.street, 130, y)
-      y += 15
+        .text(address.street, logoLoaded ? 145 : 40, y)
+      y += 18
     }
     if (address.city || address.state || address.pincode) {
       const cityState = [address.city, address.state, address.pincode].filter(Boolean).join(', ')
-      doc.fillColor('#666666')
-        .fontSize(10)
+      doc.fillColor('#4b5563')
+        .fontSize(11)
         .font('Helvetica')
-        .text(cityState, 130, y)
-      y += 15
+        .text(cityState, logoLoaded ? 145 : 40, y)
+      y += 18
     }
     if (safeCompany.email) {
-      doc.fillColor('#666666')
-        .fontSize(10)
+      doc.fillColor('#4b5563')
+        .fontSize(11)
         .font('Helvetica')
-        .text(safeCompany.email, 130, y)
-      y += 15
+        .text(safeCompany.email, logoLoaded ? 145 : 40, y)
+      y += 18
     }
     if (safeCompany.phone) {
-      doc.fillColor('#666666')
-        .fontSize(10)
+      doc.fillColor('#4b5563')
+        .fontSize(11)
         .font('Helvetica')
-        .text(safeCompany.phone, 130, y)
-      y += 15
+        .text(safeCompany.phone, logoLoaded ? 145 : 40, y)
+      y += 18
     }
     if (safeCompany.gstin) {
-      doc.fillColor('#333333')
-        .fontSize(10)
+      doc.fillColor('#111827')
+        .fontSize(11)
         .font('Helvetica-Bold')
-        .text(`GSTIN: ${safeCompany.gstin}`, 130, y)
+        .text(`GSTIN: ${safeCompany.gstin}`, logoLoaded ? 145 : 40, y)
     }
     
-    // INVOICE text on right side with black background
-    doc.rect(450, headerY, 105, 40)
+    // Determine the document type label
+    const documentType = invoiceType === 'PROPOSAL' ? 'PROPOSAL' : 
+                        invoiceType === 'PROFORMA INVOICE' ? 'PROFORMA' : 'INVOICE'
+    
+    // INVOICE/PROPOSAL text on right side with improved styling
+    doc.rect(450, headerY, 105, 45)
       .fill('#000000')
     
     doc.fillColor('#ffffff')
-      .fontSize(16)
+      .fontSize(18)
       .font('Helvetica-Bold')
-      .text(invoiceType, 450, headerY + 15, { width: 105, align: 'center' })
+      .text(documentType, 450, headerY + 18, { width: 105, align: 'center' })
     
-    // Invoice number below
-    doc.rect(450, headerY + 45, 105, 35)
-      .lineWidth(1)
-      .stroke('#e0e0e0')
+    // Invoice/Proposal number below with better box styling
+    doc.rect(450, headerY + 50, 105, 40)
+      .lineWidth(1.5)
+      .stroke('#d1d5db')
     
-    doc.fillColor('#333333')
-      .fontSize(12)
-      .font('Helvetica-Bold')
-      .text('Invoice No', 455, headerY + 52)
+    doc.fillColor('#6b7280')
+      .fontSize(10)
+      .font('Helvetica')
+      .text(invoiceType === 'PROPOSAL' ? 'Proposal No' : 'Invoice No', 455, headerY + 58)
     
-    return headerY + 90
+    return headerY + 95
   }
   
   static addInvoiceDetails(doc, invoice, textColor, startY = 0) {
@@ -256,134 +257,151 @@ export class PDFService {
     
     const detailsY = startY + 10
     
-    // Add invoice number to the header box
-    doc.fillColor('#333333')
-      .fontSize(12)
+    // Add invoice number to the header box with better styling
+    doc.fillColor('#111827')
+      .fontSize(13)
       .font('Helvetica-Bold')
       .text(invoice.invoiceNumber || 'N/A', 455, startY - 35, { width: 100, align: 'center' })
     
+    // Add separator line for better visual separation
+    doc.moveTo(40, detailsY)
+      .lineTo(555, detailsY)
+      .lineWidth(1)
+      .stroke('#e5e7eb')
+    
     // Invoice details section - two column layout
-    let y = detailsY + 40
+    let y = detailsY + 25
     
     // Left column - Invoice Details
-    doc.fillColor('#666666')
-      .fontSize(10)
+    doc.fillColor('#374151')
+      .fontSize(11)
       .font('Helvetica-Bold')
       .text('INVOICE DETAILS', 40, y)
     
-    y += 20
+    y += 25
     
     // Invoice No
-    doc.fillColor('#666666')
+    doc.fillColor('#6b7280')
       .fontSize(10)
       .font('Helvetica')
       .text('Invoice No:', 40, y)
-    doc.fillColor(textColor)
+    doc.fillColor('#111827')
+      .fontSize(10)
       .font('Helvetica-Bold')
       .text(invoice.invoiceNumber || 'N/A', 120, y)
-    y += 18
+    y += 20
     
     // Invoice Date
-    doc.fillColor('#666666')
+    doc.fillColor('#6b7280')
       .fontSize(10)
       .font('Helvetica')
       .text('Date:', 40, y)
-    doc.fillColor(textColor)
+    doc.fillColor('#111827')
+      .fontSize(10)
       .font('Helvetica-Bold')
       .text(invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A', 120, y)
-    y += 18
+    y += 20
     
     // Proforma Ref (if exists)
     if (invoice.proformaInvoice) {
-      doc.fillColor('#666666')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
         .text('Proforma Ref:', 40, y)
-      doc.fillColor(textColor)
+      doc.fillColor('#111827')
+        .fontSize(10)
         .font('Helvetica-Bold')
         .text(invoice.proformaInvoice.invoiceNumber || 'N/A', 120, y)
-      y += 18
+      y += 20
     }
     
     // Status
-    doc.fillColor('#666666')
+    doc.fillColor('#6b7280')
       .fontSize(10)
       .font('Helvetica')
       .text('Status:', 40, y)
-    doc.fillColor(textColor)
+    doc.fillColor('#111827')
+      .fontSize(10)
       .font('Helvetica-Bold')
       .text(invoice.status ? invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1) : 'N/A', 120, y)
     
     // Right column - Bill To
-    y = detailsY + 40
+    y = detailsY + 25
     const billToX = 320
     
-    doc.fillColor('#666666')
-      .fontSize(10)
+    doc.fillColor('#374151')
+      .fontSize(11)
       .font('Helvetica-Bold')
       .text('BILL TO', billToX, y)
     
-    y += 20
+    y += 25
     
     // Company Name
-    doc.fillColor(textColor)
-      .fontSize(11)
+    doc.fillColor('#111827')
+      .fontSize(12)
       .font('Helvetica-Bold')
       .text(customer.companyName || 'N/A', billToX, y)
-    y += 18
+    y += 20
     
     // Contact Person
     if (customer.contactPerson) {
-      doc.fillColor('#666666')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
         .text(customer.contactPerson, billToX, y)
-      y += 15
+      y += 18
     }
     
     // Email
     if (customer.email) {
-      doc.fillColor('#666666')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
         .text(customer.email, billToX, y)
-      y += 15
+      y += 18
     }
     
     // Phone
     if (customer.phone) {
-      doc.fillColor('#666666')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
         .text(customer.phone, billToX, y)
-      y += 15
+      y += 18
     }
     
     // Address
     if (customer.billingAddress) {
       const addr = customer.billingAddress
       const address = [addr.street, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ')
-      doc.fillColor('#666666')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
-        .text(address, billToX, y)
+        .text(address, billToX, y, { width: 235 })
     } else if (customer.address) {
       const addr = customer.address
       const address = [addr.street, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ')
-      doc.fillColor('#666666')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
-        .text(address, billToX, y)
+        .text(address, billToX, y, { width: 235 })
     }
     
     // GSTIN
     if (customer.gstin) {
-      y += 15
-      doc.fillColor('#666666')
+      y += 18
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
         .text(`GSTIN: ${customer.gstin}`, billToX, y)
     }
+    
+    // Add separator line
+    y += 25
+    doc.moveTo(40, y)
+      .lineTo(555, y)
+      .lineWidth(1)
+      .stroke('#e5e7eb')
     
     return y + 20
   }
@@ -784,10 +802,18 @@ export class PDFService {
     // Handle missing company settings
     const safeCompany = company || {}
     
-    // Signature section on the right - matching CRM UI
+    // Signature section on the right - improved alignment and dynamic handling
     let currentY = signatureY
     
-    // Add signature image if available
+    // Add separator line before signature section
+    doc.moveTo(40, currentY)
+      .lineTo(555, currentY)
+      .lineWidth(1)
+      .stroke('#e5e7eb')
+    
+    currentY += 25
+    
+    // Add signature image if available with better error handling
     if (safeCompany.authorizedSignatory?.signatureImage) {
       try {
         let signaturePath
@@ -803,63 +829,79 @@ export class PDFService {
         }
         
         if (signaturePath && fs.existsSync(signaturePath)) {
-          doc.image(signaturePath, 350, currentY, { width: 160, height: 60 })
-          currentY += 65
+          // Better positioning for signature image with proper fit
+          doc.image(signaturePath, 340, currentY, { 
+            width: 200, 
+            height: 80,
+            fit: [200, 80],
+            align: 'center',
+            valign: 'center'
+          })
+          currentY += 85
         } else {
           console.log('Signature file not found at path:', signaturePath)
-          // Fallback to signature line
-          doc.moveTo(350, currentY + 15)
-            .lineTo(510, currentY + 15)
-            .lineWidth(1)
-            .stroke('#e5e7eb')
-          currentY += 25
+          // Fallback to signature line with better styling
+          doc.moveTo(340, currentY + 30)
+            .lineTo(540, currentY + 30)
+            .lineWidth(2)
+            .stroke('#111827')
+          currentY += 40
         }
       } catch (error) {
         console.log('Could not load signature:', error)
-        // Fallback to signature line
-        doc.moveTo(350, currentY + 15)
-          .lineTo(510, currentY + 15)
-          .lineWidth(1)
-          .stroke('#e5e7eb')
-        currentY += 25
+        // Fallback to signature line with better styling
+        doc.moveTo(340, currentY + 30)
+          .lineTo(540, currentY + 30)
+          .lineWidth(2)
+          .stroke('#111827')
+        currentY += 40
       }
     } else {
-      // Signature line
-      doc.moveTo(350, currentY + 15)
-        .lineTo(510, currentY + 15)
-        .lineWidth(1)
-        .stroke('#e5e7eb')
-      currentY += 25
+      // Signature line - thicker and darker with better positioning
+      doc.moveTo(340, currentY + 30)
+        .lineTo(540, currentY + 30)
+        .lineWidth(2)
+        .stroke('#111827')
+      currentY += 40
     }
     
-    // Signature name and designation
+    // Signature name and designation - improved styling and dynamic handling
     if (safeCompany.authorizedSignatory?.name) {
       doc.fillColor('#111827')
-        .fontSize(11)
+        .fontSize(13)
         .font('Helvetica-Bold')
-        .text(safeCompany.authorizedSignatory.name, 350, currentY)
-      currentY += 15
+        .text(safeCompany.authorizedSignatory.name, 340, currentY)
+      currentY += 20
       
       if (safeCompany.authorizedSignatory?.designation) {
         doc.fillColor('#6b7280')
-          .fontSize(10)
+          .fontSize(11)
           .font('Helvetica')
-          .text(safeCompany.authorizedSignatory.designation, 350, currentY)
-        currentY += 15
+          .text(safeCompany.authorizedSignatory.designation, 340, currentY)
+        currentY += 20
       }
     } else {
       doc.fillColor('#111827')
-        .fontSize(11)
+        .fontSize(13)
         .font('Helvetica-Bold')
-        .text('Authorized Signatory', 350, currentY)
-      currentY += 15
+        .text('Authorized Signatory', 340, currentY)
+      currentY += 20
     }
     
-    // Company name below signature
+    // Company name below signature - improved positioning and formatting
     doc.fillColor('#6b7280')
+      .fontSize(11)
+      .font('Helvetica')
+      .text('For ' + (safeCompany.companyName || 'Datawyn Technologies'), 340, currentY)
+    
+    currentY += 25
+    
+    // Add date placeholder
+    const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    doc.fillColor('#9ca3af')
       .fontSize(10)
       .font('Helvetica')
-      .text(safeCompany.companyName || 'Datawyn Technologies', 350, currentY)
+      .text(`Date: ${today}`, 340, currentY)
     
     // Return the final Y position but cap it to avoid footer overlap
     return Math.min(currentY + 30, 730)
@@ -912,7 +954,7 @@ export class PDFService {
         currentY = this.addNewHeader(doc, companySettings, darkGrey, white, 'PROPOSAL', currentY)
         
         // Proposal details section
-        currentY = this.addProposalDetails(doc, proposal, textColor, currentY)
+        currentY = this.addProposalDetails(doc, proposal, textColor, currentY - 35)
         
         // Project Overview
         currentY = this.addProjectOverview(doc, proposal, textColor, currentY)
@@ -976,282 +1018,347 @@ export class PDFService {
     
     const detailsY = startY + 10
     
-    // Add proposal number to the header box
-    doc.fillColor('#333333')
-      .fontSize(12)
+    // Add proposal number to the header box with better styling
+    doc.fillColor('#111827')
+      .fontSize(13)
       .font('Helvetica-Bold')
       .text(proposal.proposalNumber || 'N/A', 455, startY - 35, { width: 100, align: 'center' })
     
+    // Add separator line for better visual separation
+    doc.moveTo(40, detailsY)
+      .lineTo(555, detailsY)
+      .lineWidth(1)
+      .stroke('#e5e7eb')
+    
     // Proposal details section - two column layout
-    let y = detailsY + 40
+    let y = detailsY + 25
     
     // Left column - Proposal Details
-    doc.fillColor('#666666')
-      .fontSize(10)
+    doc.fillColor('#374151')
+      .fontSize(11)
       .font('Helvetica-Bold')
       .text('PROPOSAL DETAILS', 40, y)
     
-    y += 20
+    y += 25
     
     // Proposal No
-    doc.fillColor('#666666')
+    doc.fillColor('#6b7280')
       .fontSize(10)
       .font('Helvetica')
       .text('Proposal No:', 40, y)
-    doc.fillColor(textColor)
+    doc.fillColor('#111827')
+      .fontSize(10)
       .font('Helvetica-Bold')
       .text(proposal.proposalNumber || 'N/A', 120, y)
-    y += 18
+    y += 20
     
     // Proposal Date
-    doc.fillColor('#666666')
+    doc.fillColor('#6b7280')
       .fontSize(10)
       .font('Helvetica')
       .text('Date:', 40, y)
-    doc.fillColor(textColor)
+    doc.fillColor('#111827')
+      .fontSize(10)
       .font('Helvetica-Bold')
       .text(proposal.proposalDate ? new Date(proposal.proposalDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A', 120, y)
-    y += 18
+    y += 20
     
     // Valid Until
     if (proposal.validUntil) {
-      doc.fillColor('#666666')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
         .text('Valid Until:', 40, y)
-      doc.fillColor(textColor)
+      doc.fillColor('#111827')
+        .fontSize(10)
         .font('Helvetica-Bold')
         .text(new Date(proposal.validUntil).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 120, y)
-      y += 18
+      y += 20
     }
     
     // Status
-    doc.fillColor('#666666')
+    doc.fillColor('#6b7280')
       .fontSize(10)
       .font('Helvetica')
       .text('Status:', 40, y)
-    doc.fillColor(textColor)
+    doc.fillColor('#111827')
+      .fontSize(10)
       .font('Helvetica-Bold')
       .text(proposal.status ? proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1) : 'N/A', 120, y)
     
     // Right column - Bill To
-    y = detailsY + 40
+    y = detailsY + 25
     const billToX = 320
     
-    doc.fillColor('#666666')
-      .fontSize(10)
+    doc.fillColor('#374151')
+      .fontSize(11)
       .font('Helvetica-Bold')
       .text('BILL TO', billToX, y)
     
-    y += 20
+    y += 25
     
     // Company Name
-    doc.fillColor(textColor)
-      .fontSize(11)
+    doc.fillColor('#111827')
+      .fontSize(12)
       .font('Helvetica-Bold')
       .text(customer.companyName || 'N/A', billToX, y)
-    y += 18
+    y += 20
     
     // Contact Person
     if (customer.contactPerson) {
-      doc.fillColor('#666666')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
         .text(customer.contactPerson, billToX, y)
-      y += 15
+      y += 18
     }
     
     // Email
     if (customer.email) {
-      doc.fillColor('#666666')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
         .text(customer.email, billToX, y)
-      y += 15
+      y += 18
     }
     
     // Phone
     if (customer.phone) {
-      doc.fillColor('#666666')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
         .text(customer.phone, billToX, y)
-      y += 15
+      y += 18
     }
     
     // Address
     if (customer.billingAddress) {
       const addr = customer.billingAddress
       const address = [addr.street, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ')
-      doc.fillColor('#666666')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
-        .text(address, billToX, y)
+        .text(address, billToX, y, { width: 235 })
     } else if (customer.address) {
       const addr = customer.address
       const address = [addr.street, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ')
-      doc.fillColor('#666666')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
-        .text(address, billToX, y)
+        .text(address, billToX, y, { width: 235 })
     }
     
     // GSTIN
     if (customer.gstin) {
-      y += 15
-      doc.fillColor('#666666')
+      y += 18
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
         .text(`GSTIN: ${customer.gstin}`, billToX, y)
     }
+    
+    // Add separator line
+    y += 25
+    doc.moveTo(40, y)
+      .lineTo(555, y)
+      .lineWidth(1)
+      .stroke('#e5e7eb')
     
     return y + 20
   }
 
   static addProjectOverview(doc, proposal, textColor, startY = 0) {
     const overviewY = startY + 20
-    
-    // Project Title
-    doc.fillColor('#111827')
-      .fontSize(14)
+
+    // Add section header with better styling
+    doc.fillColor('#374151')
+      .fontSize(12)
       .font('Helvetica-Bold')
-      .text(proposal.projectTitle || 'Project Proposal', 40, overviewY)
-    
+      .text('PROJECT OVERVIEW', 40, overviewY)
+
     let y = overviewY + 25
-    
+
+    // Project Title - improved styling with better colors
+    doc.fillColor('#111827')
+      .fontSize(18)
+      .font('Helvetica-Bold')
+      .text(proposal.projectTitle || 'Project Proposal', 40, y)
+
+    y += 35
+
     // Project Subtitle
     if (proposal.projectSubtitle) {
       doc.fillColor('#6b7280')
-        .fontSize(11)
+        .fontSize(13)
         .font('Helvetica')
         .text(proposal.projectSubtitle, 40, y)
-      y += 20
+      y += 28
     }
-    
-    // Project Description
+
+    // Project Description with better formatting
     if (proposal.projectDescription) {
       doc.fillColor('#374151')
+        .fontSize(11)
+        .font('Helvetica-Bold')
+      .text('Project Description:', 40, y)
+      y += 18
+      
+      doc.fillColor('#4b5563')
         .fontSize(10)
         .font('Helvetica')
         .text(proposal.projectDescription, 40, y, {
           width: 515,
           align: 'justify'
         })
-      y += 25
+      y += 35
     }
-    
-    // Objectives
+
+    // Objectives with better formatting
     if (proposal.objectives) {
-      doc.fillColor('#6b7280')
-        .fontSize(10)
+      doc.fillColor('#374151')
+        .fontSize(11)
         .font('Helvetica-Bold')
         .text('Project Objectives:', 40, y)
-      y += 15
+      y += 18
       
-      doc.fillColor('#374151')
+      doc.fillColor('#4b5563')
         .fontSize(10)
         .font('Helvetica')
         .text(proposal.objectives, 40, y, {
           width: 515,
           align: 'justify'
         })
-      y += 25
+      y += 35
     }
-    
-    // Proposed Solution
+
+    // Proposed Solution with better formatting
     if (proposal.proposedSolution) {
-      doc.fillColor('#6b7280')
-        .fontSize(10)
+      doc.fillColor('#374151')
+        .fontSize(11)
         .font('Helvetica-Bold')
         .text('Proposed Solution:', 40, y)
-      y += 15
-      
-      doc.fillColor('#374151')
+      y += 18
+
+      doc.fillColor('#4b5563')
         .fontSize(10)
         .font('Helvetica')
         .text(proposal.proposedSolution, 40, y, {
           width: 515,
           align: 'justify'
         })
-      y += 25
+      y += 35
     }
-    
-    return y + 10
+
+    // Add separator line with better styling
+    doc.moveTo(40, y)
+      .lineTo(555, y)
+      .lineWidth(1)
+      .stroke('#e5e7eb')
+
+    return y + 25
   }
 
   static addScopeOfWork(doc, proposal, textColor, startY = 0) {
     const scopeY = startY + 20
     
-    doc.fillColor('#6b7280')
-      .fontSize(10)
+    // Add section header with better styling
+    doc.fillColor('#374151')
+      .fontSize(12)
       .font('Helvetica-Bold')
       .text('SCOPE OF WORK', 40, scopeY)
     
-    let y = scopeY + 20
+    let y = scopeY + 25
     
     proposal.scopeOfWork.forEach((scope, index) => {
+      // Add separator before each item (except first)
+      if (index > 0) {
+        doc.moveTo(40, y)
+          .lineTo(555, y)
+          .lineWidth(0.5)
+          .stroke('#e5e7eb')
+        y += 15
+      }
+      
+      // Item title with better styling
       doc.fillColor('#111827')
-        .fontSize(11)
+        .fontSize(12)
         .font('Helvetica-Bold')
         .text(`${index + 1}. ${scope.title}`, 40, y)
-      y += 18
+      y += 20
       
       if (scope.description) {
-        doc.fillColor('#374151')
+        doc.fillColor('#4b5563')
           .fontSize(10)
           .font('Helvetica')
           .text(scope.description, 50, y, {
             width: 505,
             align: 'justify'
           })
-        y += 18
+        y += 20
       }
       
       if (scope.bulletPoints && scope.bulletPoints.length > 0) {
         scope.bulletPoints.forEach(point => {
-          doc.fillColor('#374151')
+          doc.fillColor('#4b5563')
             .fontSize(9)
             .font('Helvetica')
             .text(`• ${point}`, 50, y, {
               width: 505,
               align: 'justify'
             })
-          y += 15
+          y += 18
         })
       }
       
-      y += 10
+      y += 15
     })
     
-    return y + 10
+    // Add separator line at the end
+    doc.moveTo(40, y)
+      .lineTo(555, y)
+      .lineWidth(1)
+      .stroke('#e5e7eb')
+    
+    return y + 20
   }
 
   static addDeliverables(doc, proposal, textColor, startY = 0) {
     const deliverablesY = startY + 20
     
-    doc.fillColor('#6b7280')
-      .fontSize(10)
+    // Add section header with better styling
+    doc.fillColor('#374151')
+      .fontSize(12)
       .font('Helvetica-Bold')
       .text('DELIVERABLES', 40, deliverablesY)
     
-    let y = deliverablesY + 20
+    let y = deliverablesY + 25
     
     proposal.deliverables.forEach((deliverable, index) => {
+      // Add separator before each item (except first)
+      if (index > 0) {
+        doc.moveTo(40, y)
+          .lineTo(555, y)
+          .lineWidth(0.5)
+          .stroke('#e5e7eb')
+        y += 15
+      }
+      
+      // Item title with better styling
       doc.fillColor('#111827')
-        .fontSize(11)
+        .fontSize(12)
         .font('Helvetica-Bold')
         .text(`${index + 1}. ${deliverable.name}`, 40, y)
-      y += 18
+      y += 20
       
       if (deliverable.description) {
-        doc.fillColor('#374151')
+        doc.fillColor('#4b5563')
           .fontSize(10)
           .font('Helvetica')
           .text(deliverable.description, 50, y, {
             width: 505,
             align: 'justify'
           })
-        y += 18
+        y += 20
       }
       
       if (deliverable.quantity) {
@@ -1259,7 +1366,7 @@ export class PDFService {
           .fontSize(9)
           .font('Helvetica')
           .text(`Quantity: ${deliverable.quantity}`, 50, y)
-        y += 15
+        y += 18
       }
       
       if (deliverable.notes) {
@@ -1267,29 +1374,36 @@ export class PDFService {
           .fontSize(9)
           .font('Helvetica')
           .text(`Notes: ${deliverable.notes}`, 50, y)
-        y += 15
+        y += 18
       }
       
-      y += 10
+      y += 15
     })
     
-    return y + 10
+    // Add separator line at the end
+    doc.moveTo(40, y)
+      .lineTo(555, y)
+      .lineWidth(1)
+      .stroke('#e5e7eb')
+    
+    return y + 20
   }
 
   static addTechnologyStack(doc, proposal, textColor, startY = 0) {
     const techY = startY + 20
     
-    doc.fillColor('#6b7280')
-      .fontSize(10)
+    // Add section header with better styling
+    doc.fillColor('#374151')
+      .fontSize(12)
       .font('Helvetica-Bold')
       .text('TECHNOLOGY STACK', 40, techY)
     
-    let y = techY + 20
+    let y = techY + 25
     
-    // Create a grid of technologies
+    // Create a grid of technologies with better styling
     const techPerRow = 4
-    const techWidth = 120
-    const techHeight = 30
+    const techWidth = 125
+    const techHeight = 35
     
     proposal.technologyStack.forEach((tech, index) => {
       const col = index % techPerRow
@@ -1298,80 +1412,112 @@ export class PDFService {
       const x = 40 + (col * (techWidth + 10))
       const yPos = y + (row * (techHeight + 10))
       
+      // Better styled technology box
       doc.rect(x, yPos, techWidth, techHeight)
-        .fill('#f3f4f6')
+        .fill('#f9fafb')
         .lineWidth(1)
-        .stroke('#e5e7eb')
+        .stroke('#d1d5db')
       
+      // Better text positioning and styling
       doc.fillColor('#111827')
-        .fontSize(9)
+        .fontSize(10)
         .font('Helvetica')
-        .text(tech, x + 10, yPos + 10)
+        .text(tech, x + 10, yPos + 12, { width: techWidth - 20, align: 'center' })
     })
     
     const rows = Math.ceil(proposal.technologyStack.length / techPerRow)
-    return y + (rows * (techHeight + 10)) + 10
+    const finalY = y + (rows * (techHeight + 10)) + 15
+    
+    // Add separator line
+    doc.moveTo(40, finalY)
+      .lineTo(555, finalY)
+      .lineWidth(1)
+      .stroke('#e5e7eb')
+    
+    return finalY + 20
   }
 
   static addTimeline(doc, proposal, textColor, startY = 0) {
     const timelineY = startY + 20
     
-    doc.fillColor('#6b7280')
-      .fontSize(10)
+    // Add section header with better styling
+    doc.fillColor('#374151')
+      .fontSize(12)
       .font('Helvetica-Bold')
       .text('PROJECT TIMELINE', 40, timelineY)
     
-    let y = timelineY + 20
+    let y = timelineY + 25
     
-    // Timeline summary
+    // Timeline summary with better formatting
     if (proposal.timeline.startDate) {
-      doc.fillColor('#374151')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
-        .text(`Start Date: ${new Date(proposal.timeline.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 40, y)
-      y += 15
+        .text('Start Date:', 40, y)
+      doc.fillColor('#111827')
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .text(new Date(proposal.timeline.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 100, y)
+      y += 18
     }
     
     if (proposal.timeline.estimatedCompletionDate) {
-      doc.fillColor('#374151')
+      doc.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
-        .text(`Estimated Completion: ${new Date(proposal.timeline.estimatedCompletionDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 40, y)
-      y += 15
+        .text('Estimated Completion:', 40, y)
+      doc.fillColor('#111827')
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .text(new Date(proposal.timeline.estimatedCompletionDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 100, y)
+      y += 18
     }
     
     if (proposal.timeline.duration) {
-      doc.fillColor('#374151')
-        .fontSize(10)
-        .font('Helvetica')
-        .text(`Duration: ${proposal.timeline.duration}`, 40, y)
-      y += 20
-    }
-    
-    // Milestones
-    if (proposal.timeline.milestones && proposal.timeline.milestones.length > 0) {
       doc.fillColor('#6b7280')
         .fontSize(10)
+        .font('Helvetica')
+        .text('Duration:', 40, y)
+      doc.fillColor('#111827')
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .text(proposal.timeline.duration, 100, y)
+      y += 25
+    }
+    
+    // Milestones with better formatting
+    if (proposal.timeline.milestones && proposal.timeline.milestones.length > 0) {
+      doc.fillColor('#374151')
+        .fontSize(11)
         .font('Helvetica-Bold')
         .text('Milestones:', 40, y)
-      y += 15
+      y += 20
       
       proposal.timeline.milestones.forEach((milestone, index) => {
+        // Add separator before each milestone (except first)
+        if (index > 0) {
+          doc.moveTo(40, y)
+            .lineTo(555, y)
+            .lineWidth(0.5)
+            .stroke('#e5e7eb')
+          y += 15
+        }
+        
         doc.fillColor('#111827')
-          .fontSize(10)
+          .fontSize(11)
           .font('Helvetica-Bold')
           .text(`${index + 1}. ${milestone.title}`, 50, y)
-        y += 15
+        y += 18
         
         if (milestone.description) {
-          doc.fillColor('#374151')
+          doc.fillColor('#4b5563')
             .fontSize(9)
             .font('Helvetica')
             .text(milestone.description, 50, y, {
               width: 505,
               align: 'justify'
             })
-          y += 15
+          y += 18
         }
         
         if (milestone.expectedDate) {
@@ -1379,7 +1525,7 @@ export class PDFService {
             .fontSize(9)
             .font('Helvetica')
             .text(`Expected: ${new Date(milestone.expectedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 50, y)
-          y += 15
+          y += 18
         }
         
         if (milestone.duration) {
@@ -1387,13 +1533,19 @@ export class PDFService {
             .fontSize(9)
             .font('Helvetica')
             .text(`Duration: ${milestone.duration}`, 50, y)
-          y += 15
+          y += 18
         }
         
-        y += 10
+        y += 15
       })
     }
     
-    return y + 10
+    // Add separator line at the end
+    doc.moveTo(40, y)
+      .lineTo(555, y)
+      .lineWidth(1)
+      .stroke('#e5e7eb')
+    
+    return y + 20
   }
 }
