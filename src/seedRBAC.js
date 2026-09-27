@@ -93,6 +93,14 @@ const seedRBAC = async () => {
       console.log(`Updated ${usersWithoutRole.length} existing users with Admin role`)
     }
 
+    // Update existing Admin role to include all new permissions
+    const existingAdminRole = await Role.findOne({ name: 'Admin' })
+    if (existingAdminRole) {
+      existingAdminRole.permissions = permissions.map(p => p._id)
+      await existingAdminRole.save()
+      console.log('Updated existing Admin role with all permissions')
+    }
+
     console.log('\n=== RBAC Data Seeded Successfully ===')
     console.log('Roles created: Admin only')
     console.log('Total permissions:', permissions.length)
