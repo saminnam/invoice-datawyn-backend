@@ -39,6 +39,12 @@ const seedRBAC = async () => {
       { name: 'proforma.delete', description: 'Delete proforma invoices', module: 'proforma', action: 'delete' },
       { name: 'proforma.convert', description: 'Convert proforma to invoice', module: 'proforma', action: 'manage' },
       
+      // Proposal permissions
+      { name: 'proposals.view', description: 'View proposals', module: 'proposals', action: 'read' },
+      { name: 'proposals.create', description: 'Create proposals', module: 'proposals', action: 'create' },
+      { name: 'proposals.edit', description: 'Edit proposals', module: 'proposals', action: 'update' },
+      { name: 'proposals.delete', description: 'Delete proposals', module: 'proposals', action: 'delete' },
+      
       // Invoice permissions
       { name: 'invoices.view', description: 'View invoices', module: 'invoices', action: 'read' },
       { name: 'invoices.create', description: 'Create invoices', module: 'invoices', action: 'create' },

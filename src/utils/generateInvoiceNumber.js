@@ -1,5 +1,6 @@
 import ProformaInvoice from '../models/ProformaInvoice.js'
 import Invoice from '../models/Invoice.js'
+import Proposal from '../models/Proposal.js'
 
 export const generateProformaInvoiceNumber = async (prefix = 'PI') => {
   const year = new Date().getFullYear()
@@ -21,6 +22,20 @@ export const generateInvoiceNumber = async (prefix = 'INV') => {
   
   const count = await Invoice.countDocuments({
     invoiceNumber: pattern
+  })
+  
+  const nextNumber = count + 1
+  const paddedNumber = String(nextNumber).padStart(4, '0')
+  
+  return `${prefix}-${year}-${paddedNumber}`
+}
+
+export const generateProposalNumber = async (prefix = 'PROP') => {
+  const year = new Date().getFullYear()
+  const pattern = new RegExp(`^${prefix}-${year}-`)
+  
+  const count = await Proposal.countDocuments({
+    proposalNumber: pattern
   })
   
   const nextNumber = count + 1

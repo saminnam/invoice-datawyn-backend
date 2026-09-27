@@ -446,8 +446,8 @@ export class PDFService {
       
       x = 50
       
-      // Description - handle both proforma and invoice item structures
-      let desc = item.productSnapshot?.name || item.description || item.name || 'N/A'
+      // Description - handle both proforma, invoice, and proposal item structures
+      let desc = item.productSnapshot?.name || item.description || item.name || item.customName || 'N/A'
       if (!desc || desc === 'N/A') {
         desc = 'Product/Service'
       }
@@ -883,5 +883,517 @@ export class PDFService {
         align: 'center',
         width: 515
       })
+  }
+
+  static async generateProposal(proposal, companySettings) {
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFKit({ 
+          margin: 40, 
+          size: 'A4',
+          bufferPages: true
+        })
+        const chunks = []
+        
+        doc.on('data', chunk => chunks.push(chunk))
+        doc.on('end', () => resolve(Buffer.concat(chunks)))
+        doc.on('error', reject)
+        
+        // New color scheme matching the design
+        const darkGrey = '#2d2d2d'
+        const lightGrey = '#f5f5f5'
+        const mediumGrey = '#e0e0e0'
+        const white = '#ffffff'
+        const textColor = '#333333'
+        
+        let currentY = 0
+        
+        // Add new header
+        currentY = this.addNewHeader(doc, companySettings, darkGrey, white, 'PROPOSAL', currentY)
+        
+        // Proposal details section
+        currentY = this.addProposalDetails(doc, proposal, textColor, currentY)
+        
+        // Project Overview
+        currentY = this.addProjectOverview(doc, proposal, textColor, currentY)
+        
+        // Scope of Work
+        if (proposal.scopeOfWork && proposal.scopeOfWork.length > 0) {
+          currentY = this.addScopeOfWork(doc, proposal, textColor, currentY)
+        }
+        
+        // Deliverables
+        if (proposal.deliverables && proposal.deliverables.length > 0) {
+          currentY = this.addDeliverables(doc, proposal, textColor, currentY)
+        }
+        
+        // Technology Stack
+        if (proposal.technologyStack && proposal.technologyStack.length > 0) {
+          currentY = this.addTechnologyStack(doc, proposal, textColor, currentY)
+        }
+        
+        // Timeline
+        if (proposal.timeline) {
+          currentY = this.addTimeline(doc, proposal, textColor, currentY)
+        }
+        
+        // New table design
+        currentY = this.addNewTable(doc, proposal, lightGrey, mediumGrey, textColor, currentY)
+        
+        // Summary section with dark grey TOTAL box
+        currentY = this.addNewSummary(doc, proposal, darkGrey, white, textColor, currentY)
+        
+        // Amount in words section
+        currentY = this.addAmountInWords(doc, proposal, textColor, currentY)
+        
+        // Payment Terms
+        currentY = this.addPaymentTerms(doc, proposal, textColor, currentY)
+        
+        // Notes
+        currentY = this.addNotes(doc, proposal, textColor, currentY)
+        
+        // Terms & Conditions
+        currentY = this.addTermsAndConditions(doc, proposal, textColor, currentY)
+        
+        // Bank Details
+        currentY = this.addBankDetails(doc, companySettings, textColor, currentY)
+        
+        // Signature section
+        currentY = this.addSignature(doc, proposal, companySettings, textColor, currentY)
+        
+        // Contact footer - positioned after signature with minimum spacing
+        this.addContactFooter(doc, companySettings, darkGrey, white, currentY)
+        
+        doc.end()
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
+  static addProposalDetails(doc, proposal, textColor, startY = 0) {
+    const customer = proposal.customerSnapshot || {}
+    
+    const detailsY = startY + 10
+    
+    // Add proposal number to the header box
+    doc.fillColor('#333333')
+      .fontSize(12)
+      .font('Helvetica-Bold')
+      .text(proposal.proposalNumber || 'N/A', 455, startY - 35, { width: 100, align: 'center' })
+    
+    // Proposal details section - two column layout
+    let y = detailsY + 40
+    
+    // Left column - Proposal Details
+    doc.fillColor('#666666')
+      .fontSize(10)
+      .font('Helvetica-Bold')
+      .text('PROPOSAL DETAILS', 40, y)
+    
+    y += 20
+    
+    // Proposal No
+    doc.fillColor('#666666')
+      .fontSize(10)
+      .font('Helvetica')
+      .text('Proposal No:', 40, y)
+    doc.fillColor(textColor)
+      .font('Helvetica-Bold')
+      .text(proposal.proposalNumber || 'N/A', 120, y)
+    y += 18
+    
+    // Proposal Date
+    doc.fillColor('#666666')
+      .fontSize(10)
+      .font('Helvetica')
+      .text('Date:', 40, y)
+    doc.fillColor(textColor)
+      .font('Helvetica-Bold')
+      .text(proposal.proposalDate ? new Date(proposal.proposalDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A', 120, y)
+    y += 18
+    
+    // Valid Until
+    if (proposal.validUntil) {
+      doc.fillColor('#666666')
+        .fontSize(10)
+        .font('Helvetica')
+        .text('Valid Until:', 40, y)
+      doc.fillColor(textColor)
+        .font('Helvetica-Bold')
+        .text(new Date(proposal.validUntil).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 120, y)
+      y += 18
+    }
+    
+    // Status
+    doc.fillColor('#666666')
+      .fontSize(10)
+      .font('Helvetica')
+      .text('Status:', 40, y)
+    doc.fillColor(textColor)
+      .font('Helvetica-Bold')
+      .text(proposal.status ? proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1) : 'N/A', 120, y)
+    
+    // Right column - Bill To
+    y = detailsY + 40
+    const billToX = 320
+    
+    doc.fillColor('#666666')
+      .fontSize(10)
+      .font('Helvetica-Bold')
+      .text('BILL TO', billToX, y)
+    
+    y += 20
+    
+    // Company Name
+    doc.fillColor(textColor)
+      .fontSize(11)
+      .font('Helvetica-Bold')
+      .text(customer.companyName || 'N/A', billToX, y)
+    y += 18
+    
+    // Contact Person
+    if (customer.contactPerson) {
+      doc.fillColor('#666666')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(customer.contactPerson, billToX, y)
+      y += 15
+    }
+    
+    // Email
+    if (customer.email) {
+      doc.fillColor('#666666')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(customer.email, billToX, y)
+      y += 15
+    }
+    
+    // Phone
+    if (customer.phone) {
+      doc.fillColor('#666666')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(customer.phone, billToX, y)
+      y += 15
+    }
+    
+    // Address
+    if (customer.billingAddress) {
+      const addr = customer.billingAddress
+      const address = [addr.street, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ')
+      doc.fillColor('#666666')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(address, billToX, y)
+    } else if (customer.address) {
+      const addr = customer.address
+      const address = [addr.street, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ')
+      doc.fillColor('#666666')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(address, billToX, y)
+    }
+    
+    // GSTIN
+    if (customer.gstin) {
+      y += 15
+      doc.fillColor('#666666')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(`GSTIN: ${customer.gstin}`, billToX, y)
+    }
+    
+    return y + 20
+  }
+
+  static addProjectOverview(doc, proposal, textColor, startY = 0) {
+    const overviewY = startY + 20
+    
+    // Project Title
+    doc.fillColor('#111827')
+      .fontSize(14)
+      .font('Helvetica-Bold')
+      .text(proposal.projectTitle || 'Project Proposal', 40, overviewY)
+    
+    let y = overviewY + 25
+    
+    // Project Subtitle
+    if (proposal.projectSubtitle) {
+      doc.fillColor('#6b7280')
+        .fontSize(11)
+        .font('Helvetica')
+        .text(proposal.projectSubtitle, 40, y)
+      y += 20
+    }
+    
+    // Project Description
+    if (proposal.projectDescription) {
+      doc.fillColor('#374151')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(proposal.projectDescription, 40, y, {
+          width: 515,
+          align: 'justify'
+        })
+      y += 25
+    }
+    
+    // Objectives
+    if (proposal.objectives) {
+      doc.fillColor('#6b7280')
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .text('Project Objectives:', 40, y)
+      y += 15
+      
+      doc.fillColor('#374151')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(proposal.objectives, 40, y, {
+          width: 515,
+          align: 'justify'
+        })
+      y += 25
+    }
+    
+    // Proposed Solution
+    if (proposal.proposedSolution) {
+      doc.fillColor('#6b7280')
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .text('Proposed Solution:', 40, y)
+      y += 15
+      
+      doc.fillColor('#374151')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(proposal.proposedSolution, 40, y, {
+          width: 515,
+          align: 'justify'
+        })
+      y += 25
+    }
+    
+    return y + 10
+  }
+
+  static addScopeOfWork(doc, proposal, textColor, startY = 0) {
+    const scopeY = startY + 20
+    
+    doc.fillColor('#6b7280')
+      .fontSize(10)
+      .font('Helvetica-Bold')
+      .text('SCOPE OF WORK', 40, scopeY)
+    
+    let y = scopeY + 20
+    
+    proposal.scopeOfWork.forEach((scope, index) => {
+      doc.fillColor('#111827')
+        .fontSize(11)
+        .font('Helvetica-Bold')
+        .text(`${index + 1}. ${scope.title}`, 40, y)
+      y += 18
+      
+      if (scope.description) {
+        doc.fillColor('#374151')
+          .fontSize(10)
+          .font('Helvetica')
+          .text(scope.description, 50, y, {
+            width: 505,
+            align: 'justify'
+          })
+        y += 18
+      }
+      
+      if (scope.bulletPoints && scope.bulletPoints.length > 0) {
+        scope.bulletPoints.forEach(point => {
+          doc.fillColor('#374151')
+            .fontSize(9)
+            .font('Helvetica')
+            .text(`• ${point}`, 50, y, {
+              width: 505,
+              align: 'justify'
+            })
+          y += 15
+        })
+      }
+      
+      y += 10
+    })
+    
+    return y + 10
+  }
+
+  static addDeliverables(doc, proposal, textColor, startY = 0) {
+    const deliverablesY = startY + 20
+    
+    doc.fillColor('#6b7280')
+      .fontSize(10)
+      .font('Helvetica-Bold')
+      .text('DELIVERABLES', 40, deliverablesY)
+    
+    let y = deliverablesY + 20
+    
+    proposal.deliverables.forEach((deliverable, index) => {
+      doc.fillColor('#111827')
+        .fontSize(11)
+        .font('Helvetica-Bold')
+        .text(`${index + 1}. ${deliverable.name}`, 40, y)
+      y += 18
+      
+      if (deliverable.description) {
+        doc.fillColor('#374151')
+          .fontSize(10)
+          .font('Helvetica')
+          .text(deliverable.description, 50, y, {
+            width: 505,
+            align: 'justify'
+          })
+        y += 18
+      }
+      
+      if (deliverable.quantity) {
+        doc.fillColor('#6b7280')
+          .fontSize(9)
+          .font('Helvetica')
+          .text(`Quantity: ${deliverable.quantity}`, 50, y)
+        y += 15
+      }
+      
+      if (deliverable.notes) {
+        doc.fillColor('#6b7280')
+          .fontSize(9)
+          .font('Helvetica')
+          .text(`Notes: ${deliverable.notes}`, 50, y)
+        y += 15
+      }
+      
+      y += 10
+    })
+    
+    return y + 10
+  }
+
+  static addTechnologyStack(doc, proposal, textColor, startY = 0) {
+    const techY = startY + 20
+    
+    doc.fillColor('#6b7280')
+      .fontSize(10)
+      .font('Helvetica-Bold')
+      .text('TECHNOLOGY STACK', 40, techY)
+    
+    let y = techY + 20
+    
+    // Create a grid of technologies
+    const techPerRow = 4
+    const techWidth = 120
+    const techHeight = 30
+    
+    proposal.technologyStack.forEach((tech, index) => {
+      const col = index % techPerRow
+      const row = Math.floor(index / techPerRow)
+      
+      const x = 40 + (col * (techWidth + 10))
+      const yPos = y + (row * (techHeight + 10))
+      
+      doc.rect(x, yPos, techWidth, techHeight)
+        .fill('#f3f4f6')
+        .lineWidth(1)
+        .stroke('#e5e7eb')
+      
+      doc.fillColor('#111827')
+        .fontSize(9)
+        .font('Helvetica')
+        .text(tech, x + 10, yPos + 10)
+    })
+    
+    const rows = Math.ceil(proposal.technologyStack.length / techPerRow)
+    return y + (rows * (techHeight + 10)) + 10
+  }
+
+  static addTimeline(doc, proposal, textColor, startY = 0) {
+    const timelineY = startY + 20
+    
+    doc.fillColor('#6b7280')
+      .fontSize(10)
+      .font('Helvetica-Bold')
+      .text('PROJECT TIMELINE', 40, timelineY)
+    
+    let y = timelineY + 20
+    
+    // Timeline summary
+    if (proposal.timeline.startDate) {
+      doc.fillColor('#374151')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(`Start Date: ${new Date(proposal.timeline.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 40, y)
+      y += 15
+    }
+    
+    if (proposal.timeline.estimatedCompletionDate) {
+      doc.fillColor('#374151')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(`Estimated Completion: ${new Date(proposal.timeline.estimatedCompletionDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 40, y)
+      y += 15
+    }
+    
+    if (proposal.timeline.duration) {
+      doc.fillColor('#374151')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(`Duration: ${proposal.timeline.duration}`, 40, y)
+      y += 20
+    }
+    
+    // Milestones
+    if (proposal.timeline.milestones && proposal.timeline.milestones.length > 0) {
+      doc.fillColor('#6b7280')
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .text('Milestones:', 40, y)
+      y += 15
+      
+      proposal.timeline.milestones.forEach((milestone, index) => {
+        doc.fillColor('#111827')
+          .fontSize(10)
+          .font('Helvetica-Bold')
+          .text(`${index + 1}. ${milestone.title}`, 50, y)
+        y += 15
+        
+        if (milestone.description) {
+          doc.fillColor('#374151')
+            .fontSize(9)
+            .font('Helvetica')
+            .text(milestone.description, 50, y, {
+              width: 505,
+              align: 'justify'
+            })
+          y += 15
+        }
+        
+        if (milestone.expectedDate) {
+          doc.fillColor('#6b7280')
+            .fontSize(9)
+            .font('Helvetica')
+            .text(`Expected: ${new Date(milestone.expectedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 50, y)
+          y += 15
+        }
+        
+        if (milestone.duration) {
+          doc.fillColor('#6b7280')
+            .fontSize(9)
+            .font('Helvetica')
+            .text(`Duration: ${milestone.duration}`, 50, y)
+          y += 15
+        }
+        
+        y += 10
+      })
+    }
+    
+    return y + 10
   }
 }
