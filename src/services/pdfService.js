@@ -1010,12 +1010,12 @@ export class PDFService {
       doc.fillColor('#888888')
         .fontSize(10)
         .font('Helvetica')
-        .text('Date:', 400, y + 15)
+        .text('Date:', 380, y + 15)
       
       doc.fillColor('#000000')
         .fontSize(10)
         .font('Helvetica-Bold')
-        .text(new Date(proposal.proposalDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 440, y + 15)
+        .text(new Date(proposal.proposalDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 420, y + 15)
     }
     
     // Status if available
@@ -1023,13 +1023,13 @@ export class PDFService {
       doc.fillColor('#888888')
         .fontSize(10)
         .font('Helvetica')
-        .text('Status:', 400, y + 35)
+        .text('Status:', 380, y + 35)
       
       const statusText = proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)
       doc.fillColor('#000000')
         .fontSize(10)
         .font('Helvetica-Bold')
-        .text(statusText, 440, y + 35)
+        .text(statusText, 420, y + 35)
     }
     
     y += 75
@@ -1039,7 +1039,7 @@ export class PDFService {
       doc.fillColor('#000000')
         .fontSize(24)
         .font('Helvetica-Bold')
-        .text(proposal.projectTitle, 40, y)
+        .text(proposal.projectTitle, 40, y, { width: 515 })
       y += 35
     }
     
@@ -1055,7 +1055,7 @@ export class PDFService {
       doc.fillColor('#000000')
         .fontSize(14)
         .font('Helvetica-Bold')
-        .text(customer.companyName, 40, y)
+        .text(customer.companyName, 40, y, { width: 515 })
       
       y += 20
     }
@@ -1066,7 +1066,7 @@ export class PDFService {
       doc.fillColor('#888888')
         .fontSize(9)
         .font('Helvetica')
-        .text(clientContact, 40, y)
+        .text(clientContact, 40, y, { width: 515 })
       y += 20
     }
     
@@ -1519,7 +1519,7 @@ export class PDFService {
         .lineWidth(1)
         .stroke('#E5E5E5')
       
-      // Item number circle
+      // Item number circle - fixed alignment
       doc.circle(65, y + 25, 15)
         .fill('#000000')
       
@@ -1528,18 +1528,18 @@ export class PDFService {
         .font('Helvetica-Bold')
         .text(`${index + 1}`, 58, y + 18)
       
-      // Item title
+      // Item title - fixed alignment
       doc.fillColor('#000000')
         .fontSize(11)
         .font('Helvetica-Bold')
-        .text(scope.title, 90, y + 15, { width: 450 })
+        .text(scope.title, 90, y + 15, { width: 445 })
       
       if (scope.description) {
         doc.fillColor('#555555')
           .fontSize(9)
           .font('Helvetica')
           .text(scope.description, 90, y + 35, {
-            width: 450,
+            width: 445,
             align: 'justify'
           })
       }
@@ -1552,7 +1552,7 @@ export class PDFService {
               .fontSize(8)
               .font('Helvetica')
               .text(`• ${point}`, 90, bulletY, {
-                width: 450
+                width: 445
               })
             bulletY += 12
           }
@@ -1656,24 +1656,24 @@ export class PDFService {
         .lineWidth(1)
         .stroke('#E5E5E5')
       
-      // Item number
+      // Item number - fixed alignment
       doc.fillColor('#000000')
         .fontSize(20)
         .font('Helvetica-Bold')
         .text(`${index + 1}`, 55, y + 22)
       
-      // Item title
+      // Item title - fixed alignment
       doc.fillColor('#000000')
         .fontSize(11)
         .font('Helvetica-Bold')
-        .text(deliverable.name, 85, y + 15, { width: 440 })
+        .text(deliverable.name, 85, y + 15, { width: 435 })
       
       if (deliverable.description) {
         doc.fillColor('#555555')
           .fontSize(9)
           .font('Helvetica')
           .text(deliverable.description, 85, y + 35, {
-            width: 440,
+            width: 435,
             align: 'justify'
           })
       }
@@ -1778,17 +1778,18 @@ export class PDFService {
     
     let y = techY + 45
     
-    // Create a professional grid of technologies
+    // Create a professional grid of technologies - fixed alignment
     const techPerRow = 3
     const techWidth = 165
     const techHeight = 40
+    const techGap = 10
     
     proposal.technologyStack.forEach((tech, index) => {
       const col = index % techPerRow
       const row = Math.floor(index / techPerRow)
       
-      const x = 40 + (col * (techWidth + 10))
-      const yPos = y + (row * (techHeight + 10))
+      const x = 40 + (col * (techWidth + techGap))
+      const yPos = y + (row * (techHeight + techGap))
       
       // Professional technology box
       doc.rect(x, yPos, techWidth, techHeight)
@@ -1796,7 +1797,7 @@ export class PDFService {
         .lineWidth(1)
         .stroke('#E5E5E5')
       
-      // Professional text centered
+      // Professional text centered - fixed alignment
       doc.fillColor('#000000')
         .fontSize(10)
         .font('Helvetica-Bold')
@@ -1804,7 +1805,7 @@ export class PDFService {
     })
     
     const rows = Math.ceil(proposal.technologyStack.length / techPerRow)
-    const finalY = y + (rows * (techHeight + 10)) + 15
+    const finalY = y + (rows * (techHeight + techGap)) + 15
     
     // Professional separator line
     doc.moveTo(40, finalY)
@@ -1941,7 +1942,7 @@ export class PDFService {
           .lineWidth(1)
           .stroke('#E5E5E5')
         
-        // Milestone number circle
+        // Milestone number circle - fixed alignment
         doc.circle(65, y + 25, 15)
           .fill('#000000')
         
@@ -1950,24 +1951,24 @@ export class PDFService {
           .font('Helvetica-Bold')
           .text(`${index + 1}`, 58, y + 18)
         
-        // Milestone title
+        // Milestone title - fixed alignment
         doc.fillColor('#000000')
           .fontSize(11)
           .font('Helvetica-Bold')
-          .text(milestone.title || 'Milestone', 90, y + 12, { width: 450 })
+          .text(milestone.title || 'Milestone', 90, y + 12, { width: 445 })
         
-        // Milestone description
+        // Milestone description - fixed alignment
         if (milestone.description) {
           doc.fillColor('#555555')
             .fontSize(9)
             .font('Helvetica')
             .text(milestone.description, 90, y + 30, {
-              width: 450,
+              width: 445,
               align: 'justify'
             })
         }
         
-        // Expected date
+        // Expected date - fixed alignment
         if (milestone.expectedDate) {
           doc.fillColor('#888888')
             .fontSize(8)
@@ -2016,7 +2017,7 @@ export class PDFService {
     doc.rect(40, actualTableTop, 515, 35)
       .fill('#111111')
     
-    // Table headers - white text
+    // Table headers - white text - fixed alignment
     doc.fillColor('#FFFFFF')
       .fontSize(10)
       .font('Helvetica-Bold')
@@ -2045,14 +2046,14 @@ export class PDFService {
       }
       alternateColor = !alternateColor
       
-      // Item data with professional styling
+      // Item data with professional styling - fixed alignment
       doc.fillColor('#222222')
         .fontSize(10)
         .font('Helvetica')
       
       x = 50
       
-      // Description
+      // Description - fixed alignment
       let desc = item.productSnapshot?.name || item.description || item.name || item.customName || 'N/A'
       if (!desc || desc === 'N/A') {
         desc = 'Product/Service'
@@ -2060,21 +2061,21 @@ export class PDFService {
       doc.text(desc.substring(0, 45), x, y + 15)
       x += colWidths[0]
       
-      // Quantity
+      // Quantity - fixed alignment
       const quantity = parseFloat(item.quantity) || 1
-      doc.text(quantity.toString(), x, y + 15, { align: 'center' })
+      doc.text(quantity.toString(), x + 40, y + 15, { align: 'center' })
       x += colWidths[1]
       
-      // Rate
+      // Rate - fixed alignment
       const rate = parseFloat(item.rate) || 0
-      doc.text(`₹${rate.toFixed(2)}`, x, y + 15, { align: 'right' })
+      doc.text(`₹${rate.toFixed(2)}`, x + 40, y + 15, { align: 'right' })
       x += colWidths[2]
       
-      // Total
+      // Total - fixed alignment
       const total = parseFloat(item.total) || (rate * quantity)
       doc.fillColor('#000000')
         .font('Helvetica-Bold')
-        .text(`₹${total.toFixed(2)}`, x, y + 15, { align: 'right' })
+        .text(`₹${total.toFixed(2)}`, x + 52, y + 15, { align: 'right' })
       
       y += rowHeight
     })
@@ -2165,11 +2166,13 @@ export class PDFService {
     
     let y = paymentTermsY + 45
     
-    // Professional payment schedule with cards
+    // Professional payment schedule with cards - fixed alignment
     if (proposal.paymentSchedule && proposal.paymentSchedule.length > 0) {
+      const cardWidth = 165
+      const cardGap = 10
+      
       proposal.paymentSchedule.forEach((payment, index) => {
-        const cardWidth = 165
-        const cardX = 40 + (index * (cardWidth + 10))
+        const cardX = 40 + (index * (cardWidth + cardGap))
         
         // Professional payment card
         doc.rect(cardX, y, cardWidth, 80)
@@ -2177,24 +2180,24 @@ export class PDFService {
           .lineWidth(1)
           .stroke('#E5E5E5')
         
-        // Percentage in large black
+        // Percentage in large black - centered
         doc.fillColor('#000000')
           .fontSize(24)
           .font('Helvetica-Bold')
-          .text(`${payment.percentage || 0}%`, cardX + 15, y + 15)
+          .text(`${payment.percentage || 0}%`, cardX + 15, y + 15, { width: cardWidth - 30, align: 'center' })
         
-        // Stage name in gray
+        // Stage name in gray - centered
         doc.fillColor('#555555')
           .fontSize(9)
           .font('Helvetica')
-          .text(payment.stage || 'Stage', cardX + 15, y + 45)
+          .text(payment.stage || 'Stage', cardX + 15, y + 45, { width: cardWidth - 30, align: 'center' })
         
-        // Amount in black
+        // Amount in black - centered
         const amount = payment.amount || 0
         doc.fillColor('#000000')
           .fontSize(11)
           .font('Helvetica-Bold')
-          .text(`₹${amount.toFixed(2)}`, cardX + 15, y + 60)
+          .text(`₹${amount.toFixed(2)}`, cardX + 15, y + 60, { width: cardWidth - 30, align: 'center' })
       })
       
       y += 95
@@ -2390,7 +2393,7 @@ export class PDFService {
     
     currentY += 30
     
-    // Professional signature box
+    // Professional signature box - fixed alignment
     doc.rect(340, currentY, 200, 100)
       .fill('#FFFFFF')
       .lineWidth(1)
@@ -2420,7 +2423,7 @@ export class PDFService {
             valign: 'center'
           })
         } else {
-          // Professional signature line
+          // Professional signature line - centered
           doc.moveTo(350, currentY + 40)
             .lineTo(530, currentY + 40)
             .lineWidth(2)
@@ -2428,55 +2431,55 @@ export class PDFService {
         }
       } catch (error) {
         console.log('Could not load signature:', error)
-        // Professional signature line
+        // Professional signature line - centered
         doc.moveTo(350, currentY + 40)
           .lineTo(530, currentY + 40)
           .lineWidth(2)
           .stroke('#000000')
       }
     } else {
-      // Professional signature line
+      // Professional signature line - centered
       doc.moveTo(350, currentY + 40)
         .lineTo(530, currentY + 40)
         .lineWidth(2)
         .stroke('#000000')
     }
     
-    // Professional signature details
+    // Professional signature details - fixed alignment
     let sigY = currentY + 55
     
     if (safeCompany.authorizedSignatory?.name) {
       doc.fillColor('#000000')
         .fontSize(11)
         .font('Helvetica-Bold')
-        .text(safeCompany.authorizedSignatory.name, 350, sigY)
+        .text(safeCompany.authorizedSignatory.name, 350, sigY, { width: 180 })
       sigY += 15
       
       if (safeCompany.authorizedSignatory?.designation) {
         doc.fillColor('#555555')
           .fontSize(9)
           .font('Helvetica')
-          .text(safeCompany.authorizedSignatory.designation, 350, sigY)
+          .text(safeCompany.authorizedSignatory.designation, 350, sigY, { width: 180 })
         sigY += 15
       }
     } else {
       doc.fillColor('#000000')
         .fontSize(11)
         .font('Helvetica-Bold')
-        .text('Authorized Signatory', 350, sigY)
+        .text('Authorized Signatory', 350, sigY, { width: 180 })
       sigY += 15
     }
     
-    // Company name
+    // Company name - fixed alignment
     doc.fillColor('#888888')
       .fontSize(8)
       .font('Helvetica')
-      .text(safeCompany.companyName || 'Datawyn Technologies', 350, sigY)
+      .text(safeCompany.companyName || 'Datawyn Technologies', 350, sigY, { width: 180 })
     
-    // Terms and acceptance on left side
+    // Terms and acceptance on left side - fixed alignment
     doc.fillColor('#555555')
       .fontSize(9)
-      .font('Helvetica')
+      .font('Helvetica-Bold')
       .text('TERMS & CONDITIONS', 40, currentY + 10)
     
     if (proposal.termsAndConditions) {
@@ -2496,7 +2499,7 @@ export class PDFService {
   }
 
   static addProposalFooter(doc, company, black, mediumGray, startY = 750) {
-    // Professional footer with company details
+    // Professional footer with company details - fixed alignment
     const footerY = Math.max(startY + 10, 750)
     const safeCompany = company || {}
     
@@ -2510,35 +2513,35 @@ export class PDFService {
       .lineWidth(1)
       .stroke('#E5E5E5')
     
-    // Company details in footer
+    // Company details in footer - fixed alignment
     let footerTextY = footerY + 15
     
     doc.fillColor('#000000')
       .fontSize(9)
       .font('Helvetica-Bold')
-      .text(safeCompany.companyName || 'DATAWYN TECHNOLOGIES', 40, footerTextY)
+      .text(safeCompany.companyName || 'DATAWYN TECHNOLOGIES', 40, footerTextY, { width: 350 })
     
     footerTextY += 12
     
-    // Contact details
+    // Contact details - fixed alignment
     const contactInfo = [safeCompany.email, safeCompany.phone].filter(Boolean).join(' | ')
     if (contactInfo) {
       doc.fillColor('#555555')
         .fontSize(8)
         .font('Helvetica')
-        .text(contactInfo, 40, footerTextY)
+        .text(contactInfo, 40, footerTextY, { width: 350 })
       footerTextY += 12
     }
     
-    // Website if available
+    // Website if available - fixed alignment
     if (safeCompany.website) {
       doc.fillColor('#555555')
         .fontSize(8)
         .font('Helvetica')
-        .text(safeCompany.website, 40, footerTextY)
+        .text(safeCompany.website, 40, footerTextY, { width: 350 })
     }
     
-    // Confidential notice and page number
+    // Confidential notice and page number - fixed alignment
     doc.fillColor('#888888')
       .fontSize(8)
       .font('Helvetica')
