@@ -1604,7 +1604,7 @@ export class PDFService {
     return y + 20
   }
 
-  static addDeliverables(doc, proposal, textColor, startY = 0) {
+  static addDeliverables(doc, proposal, black, primaryText, secondaryText, startY = 0) {
     const deliverablesY = startY + 20
     
     // Black uppercase heading
@@ -1730,7 +1730,7 @@ export class PDFService {
     return y + 20
   }
 
-  static addTechnologyStack(doc, proposal, textColor, startY = 0) {
+  static addTechnologyStack(doc, proposal, black, primaryText, veryLightGray, lightGray, startY = 0) {
     const techY = startY + 20
     
     // Black uppercase heading
@@ -1832,7 +1832,7 @@ export class PDFService {
     return finalY + 20
   }
 
-  static addTimeline(doc, proposal, textColor, startY = 0) {
+  static addTimeline(doc, proposal, black, primaryText, secondaryText, startY = 0) {
     const timelineY = startY + 20
     
     // Black uppercase heading
@@ -1849,8 +1849,10 @@ export class PDFService {
     
     let y = timelineY + 30
     
-    // Timeline summary with minimal styling
-    if (proposal.timeline.startDate) {
+    // Timeline summary with minimal styling - handle missing timeline
+    const timeline = proposal.timeline || {}
+    
+    if (timeline.startDate) {
       doc.fillColor('#555555')
         .fontSize(9)
         .font('Helvetica')
@@ -1858,11 +1860,11 @@ export class PDFService {
       doc.fillColor('#000000')
         .fontSize(10)
         .font('Helvetica-Bold')
-        .text(new Date(proposal.timeline.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 100, y)
+        .text(new Date(timeline.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 100, y)
       y += 18
     }
     
-    if (proposal.timeline.estimatedCompletionDate) {
+    if (timeline.estimatedCompletionDate) {
       doc.fillColor('#555555')
         .fontSize(9)
         .font('Helvetica')
@@ -1870,11 +1872,11 @@ export class PDFService {
       doc.fillColor('#000000')
         .fontSize(10)
         .font('Helvetica-Bold')
-        .text(new Date(proposal.timeline.estimatedCompletionDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 100, y)
+        .text(new Date(timeline.estimatedCompletionDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 100, y)
       y += 18
     }
     
-    if (proposal.timeline.duration) {
+    if (timeline.duration) {
       doc.fillColor('#555555')
         .fontSize(9)
         .font('Helvetica')
@@ -1882,15 +1884,15 @@ export class PDFService {
       doc.fillColor('#000000')
         .fontSize(10)
         .font('Helvetica-Bold')
-        .text(proposal.timeline.duration, 100, y)
+        .text(timeline.duration, 100, y)
       y += 25
     }
     
     // Milestones with black lines and numbered circles
-    if (proposal.timeline.milestones && proposal.timeline.milestones.length > 0) {
+    if (timeline.milestones && timeline.milestones.length > 0) {
       y += 10
       
-      proposal.timeline.milestones.forEach((milestone, index) => {
+      timeline.milestones.forEach((milestone, index) => {
         const milestoneY = y
         
         // Black numbered circle
@@ -1917,7 +1919,7 @@ export class PDFService {
         doc.fillColor('#000000')
           .fontSize(10)
           .font('Helvetica-Bold')
-          .text(milestone.title, circleX + circleRadius * 2 + 10, milestoneY + 5)
+          .text(milestone.title || 'Milestone', circleX + circleRadius * 2 + 10, milestoneY + 5)
         
         // Milestone description
         if (milestone.description) {
@@ -2128,7 +2130,7 @@ export class PDFService {
         doc.fillColor('#000000')
           .fontSize(20)
           .font('Helvetica-Bold')
-          .text(`${payment.percentage}%`, cardX + 15, y + 15)
+          .text(`${payment.percentage || 0}%`, cardX + 15, y + 15)
         
         // Stage name in gray
         doc.fillColor('#555555')
@@ -2137,10 +2139,11 @@ export class PDFService {
           .text(payment.stage || 'Stage', cardX + 15, y + 40)
         
         // Amount in black
+        const amount = payment.amount || 0
         doc.fillColor('#000000')
           .fontSize(11)
           .font('Helvetica-Bold')
-          .text(`₹${payment.amount.toFixed(2)}`, cardX + 15, y + 55)
+          .text(`₹${amount.toFixed(2)}`, cardX + 15, y + 55)
       })
       
       y += 85
