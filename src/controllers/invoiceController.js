@@ -118,14 +118,22 @@ export const downloadInvoicePDF = async (req, res, next) => {
       hasAuthorizedSignatory: !!companySettings?.authorizedSignatory
     })
     
+    // Ensure invoice has required arrays to prevent errors
+    const safeInvoice = {
+      ...invoice.toObject(),
+      items: invoice.items || []
+    }
+    
     // Use generateInvoice for regular invoices
-    const pdfBuffer = await PDFService.generateInvoice(invoice, companySettings)
+    const pdfBuffer = await PDFService.generateInvoice(safeInvoice, companySettings)
     
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoiceNumber}.pdf"`)
     res.send(pdfBuffer)
   } catch (error) {
-    next(error)
+    console.error('PDF generation error:', error)
+    console.error('Error message:', error.message)
+    return errorResponse(res, `Failed to generate PDF: ${error.message}`, [], 500)
   }
 }
 

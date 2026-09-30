@@ -416,7 +416,7 @@ export class PDFService {
     const items = invoice.items || []
     
     // Handle missing items gracefully
-    if (!items || items.length === 0) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       doc.fillColor('#999999')
         .fontSize(11)
         .text('No items in this invoice', 40, tableTop + 20)
@@ -917,7 +917,7 @@ export class PDFService {
     // Professional header with logo and company info
     let logoHeight = 0
     
-    // Logo on left side
+    // Logo on left side - with better error handling for serverless environments
     if (safeCompany.logo) {
       try {
         let logoPath
@@ -932,16 +932,23 @@ export class PDFService {
           logoPath = path.join(process.cwd(), 'uploads', safeCompany.logo)
         }
         
-        if (logoPath && fs.existsSync(logoPath)) {
-          doc.image(logoPath, 40, y, { 
-            width: 80, 
-            height: 50,
-            fit: [80, 50]
-          })
-          logoHeight = 60
+        // Check if file exists and is accessible
+        if (logoPath) {
+          try {
+            if (fs.existsSync(logoPath)) {
+              doc.image(logoPath, 40, y, { 
+                width: 80, 
+                height: 50,
+                fit: [80, 50]
+              })
+              logoHeight = 60
+            }
+          } catch (fsError) {
+            console.log('Logo file check failed, skipping logo:', fsError.message)
+          }
         }
       } catch (error) {
-        console.log('Could not load logo:', error)
+        console.log('Could not load logo, skipping:', error.message)
       }
     }
     
@@ -1063,6 +1070,8 @@ export class PDFService {
   static async generateProposal(proposal, companySettings) {
     return new Promise((resolve, reject) => {
       try {
+        console.log('Starting PDF generation for proposal:', proposal.proposalNumber)
+        
         const doc = new PDFKit({ 
           margin: 40, 
           size: 'A4',
@@ -1071,8 +1080,14 @@ export class PDFService {
         const chunks = []
         
         doc.on('data', chunk => chunks.push(chunk))
-        doc.on('end', () => resolve(Buffer.concat(chunks)))
-        doc.on('error', reject)
+        doc.on('end', () => {
+          console.log('PDF generation completed successfully')
+          resolve(Buffer.concat(chunks))
+        })
+        doc.on('error', (error) => {
+          console.error('PDFKit error:', error)
+          reject(error)
+        })
         
         // Black & White Premium Design Color Palette
         const black = '#000000'
@@ -1138,6 +1153,8 @@ export class PDFService {
         
         doc.end()
       } catch (error) {
+        console.error('PDF generation error:', error)
+        console.error('Error stack:', error.stack)
         reject(error)
       }
     })
@@ -1473,6 +1490,14 @@ export class PDFService {
 
     let y = scopeY + 50
     
+    if (!proposal.scopeOfWork || proposal.scopeOfWork.length === 0) {
+      doc.moveTo(40, y)
+        .lineTo(555, y)
+        .lineWidth(1)
+        .stroke('#E5E5E5')
+      return y + 25
+    }
+    
     proposal.scopeOfWork.forEach((scope, index) => {
       // Professional numbered item with card
       doc.rect(40, y, 515, 70)
@@ -1507,7 +1532,7 @@ export class PDFService {
       }
       
       // Bullet points
-      if (scope.bulletPoints && scope.bulletPoints.length > 0) {
+      if (scope.bulletPoints && Array.isArray(scope.bulletPoints) && scope.bulletPoints.length > 0) {
         let bulletY = y + 52
         scope.bulletPoints.forEach((point, i) => {
           if (i < 2) {
@@ -1611,6 +1636,14 @@ export class PDFService {
       .text('DELIVERABLES', 50, deliverablesY + 12)
 
     let y = deliverablesY + 50
+    
+    if (!proposal.deliverables || proposal.deliverables.length === 0) {
+      doc.moveTo(40, y)
+        .lineTo(555, y)
+        .lineWidth(1)
+        .stroke('#E5E5E5')
+      return y + 25
+    }
     
     proposal.deliverables.forEach((deliverable, index) => {
       // Professional deliverable card
@@ -1745,6 +1778,14 @@ export class PDFService {
       .text('TECHNOLOGY STACK', 50, techY + 12)
 
     let y = techY + 50
+    
+    if (!proposal.technologyStack || proposal.technologyStack.length === 0) {
+      doc.moveTo(40, y)
+        .lineTo(555, y)
+        .lineWidth(1)
+        .stroke('#E5E5E5')
+      return y + 25
+    }
     
     // Professional grid of technologies
     const techPerRow = 3
@@ -1900,7 +1941,7 @@ export class PDFService {
     y += 55
     
     // Professional milestones
-    if (timeline.milestones && timeline.milestones.length > 0) {
+    if (timeline.milestones && Array.isArray(timeline.milestones) && timeline.milestones.length > 0) {
       timeline.milestones.forEach((milestone, index) => {
         // Milestone card
         doc.rect(40, y, 515, 55)
@@ -2000,6 +2041,10 @@ export class PDFService {
     // Table rows - professional alternating colors
     let y = actualTableTop + rowHeight
     let alternateColor = false
+    
+    if (!items || items.length === 0) {
+      return actualTableTop + 40
+    }
     
     items.forEach((item, index) => {
       // Alternate row colors
@@ -2133,7 +2178,7 @@ export class PDFService {
     let y = paymentTermsY + 50
     
     // Professional payment schedule
-    if (proposal.paymentSchedule && proposal.paymentSchedule.length > 0) {
+    if (proposal.paymentSchedule && Array.isArray(proposal.paymentSchedule) && proposal.paymentSchedule.length > 0) {
       const cardWidth = 165
       const cardGap = 10
       

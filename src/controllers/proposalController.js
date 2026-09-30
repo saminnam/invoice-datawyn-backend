@@ -385,6 +385,8 @@ export const updateProposalStatus = async (req, res, next) => {
 
 export const downloadPDF = async (req, res, next) => {
   try {
+    console.log('Starting PDF generation for proposal:', req.params.id)
+    
     const proposal = await Proposal.findById(req.params.id)
       .populate('customer', 'companyName')
     
@@ -392,14 +394,32 @@ export const downloadPDF = async (req, res, next) => {
       return errorResponse(res, 'Proposal not found', [], 404)
     }
     
-    const companySettings = await CompanySettings.findOne()
+    console.log('Proposal found:', proposal.proposalNumber)
     
-    const pdfBuffer = await PDFService.generateProposal(proposal, companySettings)
+    const companySettings = await CompanySettings.findOne()
+    console.log('Company settings found:', !!companySettings)
+    
+    // Ensure proposal has required arrays to prevent errors
+    const safeProposal = {
+      ...proposal.toObject(),
+      scopeOfWork: proposal.scopeOfWork || [],
+      deliverables: proposal.deliverables || [],
+      technologyStack: proposal.technologyStack || [],
+      items: proposal.items || [],
+      timeline: proposal.timeline || {}
+    }
+    
+    const pdfBuffer = await PDFService.generateProposal(safeProposal, companySettings)
+    
+    console.log('PDF generated successfully, size:', pdfBuffer.length)
     
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename="${proposal.proposalNumber}.pdf"`)
     res.send(pdfBuffer)
   } catch (error) {
-    next(error)
+    console.error('PDF generation error:', error)
+    console.error('Error stack:', error.stack)
+    console.error('Error message:', error.message)
+    return errorResponse(res, `Failed to generate PDF: ${error.message}`, [], 500)
   }
 }

@@ -333,13 +333,21 @@ export const downloadPDF = async (req, res, next) => {
     
     const companySettings = await CompanySettings.findOne()
     
-    const pdfBuffer = await PDFService.generateProformaInvoice(invoice, companySettings)
+    // Ensure invoice has required arrays to prevent errors
+    const safeInvoice = {
+      ...invoice.toObject(),
+      items: invoice.items || []
+    }
+    
+    const pdfBuffer = await PDFService.generateProformaInvoice(safeInvoice, companySettings)
     
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoiceNumber}.pdf"`)
     res.send(pdfBuffer)
   } catch (error) {
-    next(error)
+    console.error('PDF generation error:', error)
+    console.error('Error message:', error.message)
+    return errorResponse(res, `Failed to generate PDF: ${error.message}`, [], 500)
   }
 }
 
