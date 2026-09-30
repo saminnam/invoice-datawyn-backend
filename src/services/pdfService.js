@@ -914,115 +914,130 @@ export class PDFService {
     const headerY = startY + 30
     let y = headerY
     
-    // Clean, professional header layout
-    // Company name at top
+    // Professional header with logo and company info
+    let logoHeight = 0
+    
+    // Logo on left side
+    if (safeCompany.logo) {
+      try {
+        let logoPath
+        if (safeCompany.logo.startsWith('/uploads/')) {
+          const filename = safeCompany.logo.replace('/uploads/', '')
+          logoPath = path.join(process.cwd(), 'uploads', filename)
+        } else if (safeCompany.logo.startsWith('uploads/')) {
+          logoPath = path.join(process.cwd(), safeCompany.logo)
+        } else if (safeCompany.logo.startsWith('http')) {
+          console.log('URL-based logos not yet supported in PDF')
+        } else {
+          logoPath = path.join(process.cwd(), 'uploads', safeCompany.logo)
+        }
+        
+        if (logoPath && fs.existsSync(logoPath)) {
+          doc.image(logoPath, 40, y, { 
+            width: 80, 
+            height: 50,
+            fit: [80, 50]
+          })
+          logoHeight = 60
+        }
+      } catch (error) {
+        console.log('Could not load logo:', error)
+      }
+    }
+    
+    // Company name and tagline
+    const companyX = logoHeight > 0 ? 130 : 40
     doc.fillColor('#000000')
-      .fontSize(20)
+      .fontSize(22)
       .font('Helvetica-Bold')
-      .text(safeCompany.companyName || 'DATAWYN TECHNOLOGIES', 40, y)
+      .text(safeCompany.companyName || 'DATAWYN TECHNOLOGIES', companyX, y)
+    
+    y += 18
+    
+    // Tagline
+    doc.fillColor('#666666')
+      .fontSize(10)
+      .font('Helvetica')
+      .text('Digital Solutions That Build & Scale', companyX, y)
     
     y += 25
     
-    // Company contact details in a clean row
-    const contactDetails = []
-    if (safeCompany.email) contactDetails.push(safeCompany.email)
-    if (safeCompany.phone) contactDetails.push(safeCompany.phone)
-    if (safeCompany.website) contactDetails.push(safeCompany.website)
-    
-    if (contactDetails.length > 0) {
-      doc.fillColor('#666666')
-        .fontSize(9)
-        .font('Helvetica')
-        .text(contactDetails.join(' • '), 40, y)
-      y += 20
-    }
-    
-    // Proposal info box - clean and compact
-    doc.rect(40, y, 515, 50)
-      .fill('#F8F8F8')
+    // Divider line
+    doc.moveTo(40, y)
+      .lineTo(555, y)
       .lineWidth(1)
-      .stroke('#DDDDDD')
+      .stroke('#E5E5E5')
     
-    // Left side: Proposal number and date
+    y += 25
+    
+    // Two-column layout for proposal info and client
+    // Left column: Proposal details
     doc.fillColor('#000000')
-      .fontSize(11)
+      .fontSize(28)
       .font('Helvetica-Bold')
-      .text('PROPOSAL', 55, y + 12)
+      .text('PROPOSAL', 40, y)
+    
+    y += 20
     
     doc.fillColor('#666666')
-      .fontSize(9)
+      .fontSize(11)
       .font('Helvetica')
-      .text(proposal.proposalNumber || 'PROP-2026-0001', 55, y + 28)
+      .text(proposal.proposalNumber || 'PROP-2026-0001', 40, y)
     
-    // Right side: Date and status
+    y += 15
+    
     if (proposal.proposalDate) {
-      doc.fillColor('#666666')
+      doc.fillColor('#888888')
         .fontSize(9)
         .font('Helvetica')
-        .text('Date:', 400, y + 12)
-      
-      doc.fillColor('#000000')
-        .fontSize(9)
-        .font('Helvetica-Bold')
-        .text(new Date(proposal.proposalDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 435, y + 12)
+        .text('Date: ' + new Date(proposal.proposalDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 40, y)
+      y += 15
     }
     
     if (proposal.status) {
       const statusText = proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)
-      doc.fillColor('#666666')
+      doc.fillColor('#888888')
         .fontSize(9)
         .font('Helvetica')
-        .text('Status:', 400, y + 28)
-      
-      doc.fillColor('#000000')
-        .fontSize(9)
-        .font('Helvetica-Bold')
-        .text(statusText, 435, y + 28)
+        .text('Status: ' + statusText, 40, y)
+      y += 15
     }
     
-    y += 65
+    // Right column: Project title and client
+    const rightColumnY = headerY + 55
     
-    // Project title - prominent and clean
     if (proposal.projectTitle) {
       doc.fillColor('#000000')
-        .fontSize(22)
+        .fontSize(16)
         .font('Helvetica-Bold')
-        .text(proposal.projectTitle, 40, y, { width: 515 })
-      y += 30
+        .text(proposal.projectTitle, 300, rightColumnY, { width: 255 })
+      rightColumnY += 20
     }
     
-    // Client info - compact and clean
     if (customer.companyName) {
       doc.fillColor('#666666')
         .fontSize(9)
         .font('Helvetica')
-        .text('Prepared for:', 40, y)
-      y += 12
+        .text('Prepared for:', 300, rightColumnY)
+      rightColumnY += 12
       
       doc.fillColor('#000000')
-        .fontSize(12)
+        .fontSize(13)
         .font('Helvetica-Bold')
-        .text(customer.companyName, 40, y, { width: 515 })
-      y += 18
+        .text(customer.companyName, 300, rightColumnY, { width: 255 })
+      rightColumnY += 15
     }
     
-    // Client contact - if available
-    if (customer.contactPerson || customer.email) {
-      const clientContact = [customer.contactPerson, customer.email].filter(Boolean).join(' • ')
-      doc.fillColor('#888888')
-        .fontSize(8)
-        .font('Helvetica')
-        .text(clientContact, 40, y, { width: 515 })
-      y += 18
-    }
+    // Use the maximum Y from both columns
+    y = Math.max(y, rightColumnY)
     
-    // Clean separator line
+    // Professional divider
     doc.moveTo(40, y)
       .lineTo(555, y)
-      .lineWidth(1.5)
+      .lineWidth(2)
       .stroke('#000000')
     
-    return y + 25
+    return y + 30
   }
 
   static addContactFooter(doc, company, darkGrey, white, startY = 750) {
@@ -1283,23 +1298,20 @@ export class PDFService {
   }
 
   static addProjectOverview(doc, proposal, black, primaryText, secondaryText, startY = 0) {
-    const overviewY = startY + 15
+    const overviewY = startY + 20
 
-    // Clean section heading - no background bar
+    // Professional section heading with background
+    doc.rect(40, overviewY, 515, 35)
+      .fill('#F8F8F8')
+    
     doc.fillColor('#000000')
-      .fontSize(13)
+      .fontSize(12)
       .font('Helvetica-Bold')
-      .text('PROJECT OVERVIEW', 40, overviewY)
+      .text('PROJECT OVERVIEW', 50, overviewY + 12)
 
-    // Thin line under heading
-    doc.moveTo(40, overviewY + 20)
-      .lineTo(555, overviewY + 20)
-      .lineWidth(1)
-      .stroke('#000000')
+    let y = overviewY + 50
 
-    let y = overviewY + 32
-
-    // Project Description - compact
+    // Project Description - better spacing
     if (proposal.projectDescription) {
       doc.fillColor('#333333')
         .fontSize(10)
@@ -1308,16 +1320,16 @@ export class PDFService {
           width: 515,
           align: 'justify'
         })
-      y += 25
+      y += 30
     }
 
-    // Objectives - compact
+    // Objectives - better spacing
     if (proposal.objectives) {
       doc.fillColor('#666666')
         .fontSize(9)
         .font('Helvetica-Bold')
         .text('OBJECTIVES', 40, y)
-      y += 12
+      y += 15
       
       doc.fillColor('#333333')
         .fontSize(10)
@@ -1326,16 +1338,16 @@ export class PDFService {
           width: 515,
           align: 'justify'
         })
-      y += 25
+      y += 30
     }
 
-    // Proposed Solution - compact
+    // Proposed Solution - better spacing
     if (proposal.proposedSolution) {
       doc.fillColor('#666666')
         .fontSize(9)
         .font('Helvetica-Bold')
         .text('PROPOSED SOLUTION', 40, y)
-      y += 12
+      y += 15
 
       doc.fillColor('#333333')
         .fontSize(10)
@@ -1344,16 +1356,16 @@ export class PDFService {
           width: 515,
           align: 'justify'
         })
-      y += 25
+      y += 30
     }
 
-    // Clean separator line
+    // Professional separator line
     doc.moveTo(40, y)
       .lineTo(555, y)
-      .lineWidth(0.5)
-      .stroke('#CCCCCC')
+      .lineWidth(1)
+      .stroke('#E5E5E5')
 
-    return y + 20
+    return y + 25
   }
 
   static addProjectOverviewOld(doc, proposal, black, primaryText, secondaryText, startY = 0) {
@@ -1448,64 +1460,78 @@ export class PDFService {
   }
 
   static addScopeOfWork(doc, proposal, black, primaryText, secondaryText, startY = 0) {
-    const scopeY = startY + 15
-    
-    // Clean section heading
-    doc.fillColor('#000000')
-      .fontSize(13)
-      .font('Helvetica-Bold')
-      .text('SCOPE OF WORK', 40, scopeY)
+    const scopeY = startY + 20
 
-    // Thin line under heading
-    doc.moveTo(40, scopeY + 20)
-      .lineTo(555, scopeY + 20)
-      .lineWidth(1)
-      .stroke('#000000')
+    // Professional section heading with background
+    doc.rect(40, scopeY, 515, 35)
+      .fill('#F8F8F8')
     
-    let y = scopeY + 32
+    doc.fillColor('#000000')
+      .fontSize(12)
+      .font('Helvetica-Bold')
+      .text('SCOPE OF WORK', 50, scopeY + 12)
+
+    let y = scopeY + 50
     
     proposal.scopeOfWork.forEach((scope, index) => {
-      // Clean numbered item
+      // Professional numbered item with card
+      doc.rect(40, y, 515, 70)
+        .fill('#FFFFFF')
+        .lineWidth(1)
+        .stroke('#E5E5E5')
+      
+      // Number circle
+      doc.circle(65, y + 35, 15)
+        .fill('#000000')
+      
+      doc.fillColor('#FFFFFF')
+        .fontSize(12)
+        .font('Helvetica-Bold')
+        .text(`${index + 1}`, 58, y + 28)
+      
+      // Item title
       doc.fillColor('#000000')
         .fontSize(11)
         .font('Helvetica-Bold')
-        .text(`${index + 1}. ${scope.title}`, 40, y)
+        .text(scope.title, 90, y + 15, { width: 445 })
       
-      y += 15
-      
+      // Description
       if (scope.description) {
         doc.fillColor('#666666')
           .fontSize(9)
           .font('Helvetica')
-          .text(scope.description, 55, y, {
-            width: 500,
+          .text(scope.description, 90, y + 35, {
+            width: 445,
             align: 'justify'
           })
-        y += 18
       }
       
+      // Bullet points
       if (scope.bulletPoints && scope.bulletPoints.length > 0) {
-        scope.bulletPoints.forEach((point) => {
-          doc.fillColor('#888888')
-            .fontSize(8)
-            .font('Helvetica')
-            .text(`• ${point}`, 55, y, {
-              width: 500
-            })
-          y += 14
+        let bulletY = y + 52
+        scope.bulletPoints.forEach((point, i) => {
+          if (i < 2) {
+            doc.fillColor('#888888')
+              .fontSize(8)
+              .font('Helvetica')
+              .text(`• ${point}`, 90, bulletY, {
+                width: 445
+              })
+            bulletY += 12
+          }
         })
       }
       
-      y += 10
+      y += 80
     })
     
-    // Clean separator line
+    // Professional separator line
     doc.moveTo(40, y)
       .lineTo(555, y)
-      .lineWidth(0.5)
-      .stroke('#CCCCCC')
-    
-    return y + 20
+      .lineWidth(1)
+      .stroke('#E5E5E5')
+
+    return y + 25
   }
 
   static addScopeOfWorkOld(doc, proposal, black, primaryText, secondaryText, startY = 0) {
@@ -1573,60 +1599,70 @@ export class PDFService {
   }
 
   static addDeliverables(doc, proposal, black, primaryText, secondaryText, startY = 0) {
-    const deliverablesY = startY + 15
-    
-    // Clean section heading
-    doc.fillColor('#000000')
-      .fontSize(13)
-      .font('Helvetica-Bold')
-      .text('DELIVERABLES', 40, deliverablesY)
+    const deliverablesY = startY + 20
 
-    // Thin line under heading
-    doc.moveTo(40, deliverablesY + 20)
-      .lineTo(555, deliverablesY + 20)
-      .lineWidth(1)
-      .stroke('#000000')
+    // Professional section heading with background
+    doc.rect(40, deliverablesY, 515, 35)
+      .fill('#F8F8F8')
     
-    let y = deliverablesY + 32
+    doc.fillColor('#000000')
+      .fontSize(12)
+      .font('Helvetica-Bold')
+      .text('DELIVERABLES', 50, deliverablesY + 12)
+
+    let y = deliverablesY + 50
     
     proposal.deliverables.forEach((deliverable, index) => {
-      // Clean numbered item
+      // Professional deliverable card
+      doc.rect(40, y, 515, 60)
+        .fill('#FFFFFF')
+        .lineWidth(1)
+        .stroke('#E5E5E5')
+      
+      // Number circle
+      doc.circle(65, y + 30, 15)
+        .fill('#000000')
+      
+      doc.fillColor('#FFFFFF')
+        .fontSize(12)
+        .font('Helvetica-Bold')
+        .text(`${index + 1}`, 58, y + 23)
+      
+      // Item title
       doc.fillColor('#000000')
         .fontSize(11)
         .font('Helvetica-Bold')
-        .text(`${index + 1}. ${deliverable.name}`, 40, y)
+        .text(deliverable.name, 90, y + 12, { width: 445 })
       
-      y += 15
-      
+      // Description
       if (deliverable.description) {
         doc.fillColor('#666666')
           .fontSize(9)
           .font('Helvetica')
-          .text(deliverable.description, 55, y, {
-            width: 500,
+          .text(deliverable.description, 90, y + 30, {
+            width: 445,
             align: 'justify'
           })
-        y += 14
       }
       
+      // Quantity
       if (deliverable.quantity) {
         doc.fillColor('#888888')
           .fontSize(8)
           .font('Helvetica')
-          .text(`Quantity: ${deliverable.quantity}`, 55, y)
-        y += 14
+          .text(`Quantity: ${deliverable.quantity}`, 90, y + 45)
       }
       
-      y += 8
+      y += 70
     })
     
-    // Clean separator line
+    // Professional separator line
     doc.moveTo(40, y)
       .lineTo(555, y)
-      .lineWidth(0.5)
-      .stroke('#CCCCCC')
-    
-    return y + 20
+      .lineWidth(1)
+      .stroke('#E5E5E5')
+
+    return y + 25
   }
 
   static addDeliverablesOld(doc, proposal, textColor, startY = 0) {
@@ -1697,27 +1733,24 @@ export class PDFService {
   }
 
   static addTechnologyStack(doc, proposal, black, primaryText, veryLightGray, lightGray, startY = 0) {
-    const techY = startY + 15
-    
-    // Clean section heading
-    doc.fillColor('#000000')
-      .fontSize(13)
-      .font('Helvetica-Bold')
-      .text('TECHNOLOGY STACK', 40, techY)
+    const techY = startY + 20
 
-    // Thin line under heading
-    doc.moveTo(40, techY + 20)
-      .lineTo(555, techY + 20)
-      .lineWidth(1)
-      .stroke('#000000')
+    // Professional section heading with background
+    doc.rect(40, techY, 515, 35)
+      .fill('#F8F8F8')
     
-    let y = techY + 32
+    doc.fillColor('#000000')
+      .fontSize(12)
+      .font('Helvetica-Bold')
+      .text('TECHNOLOGY STACK', 50, techY + 12)
+
+    let y = techY + 50
     
-    // Compact grid of technologies
-    const techPerRow = 4
-    const techWidth = 120
-    const techHeight = 28
-    const techGap = 8
+    // Professional grid of technologies
+    const techPerRow = 3
+    const techWidth = 165
+    const techHeight = 35
+    const techGap = 10
     
     proposal.technologyStack.forEach((tech, index) => {
       const col = index % techPerRow
@@ -1726,29 +1759,29 @@ export class PDFService {
       const x = 40 + (col * (techWidth + techGap))
       const yPos = y + (row * (techHeight + techGap))
       
-      // Simple technology box
+      // Professional technology box
       doc.rect(x, yPos, techWidth, techHeight)
-        .fill('#F8F8F8')
-        .lineWidth(0.5)
-        .stroke('#DDDDDD')
+        .fill('#FFFFFF')
+        .lineWidth(1)
+        .stroke('#E5E5E5')
       
       // Centered text
       doc.fillColor('#000000')
-        .fontSize(9)
-        .font('Helvetica')
-        .text(tech, x + 8, yPos + 10, { width: techWidth - 16, align: 'center' })
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .text(tech, x + 10, yPos + 12, { width: techWidth - 20, align: 'center' })
     })
     
     const rows = Math.ceil(proposal.technologyStack.length / techPerRow)
-    const finalY = y + (rows * (techHeight + techGap)) + 10
+    const finalY = y + (rows * (techHeight + techGap)) + 15
     
-    // Clean separator line
+    // Professional separator line
     doc.moveTo(40, finalY)
       .lineTo(555, finalY)
-      .lineWidth(0.5)
-      .stroke('#CCCCCC')
-    
-    return finalY + 20
+      .lineWidth(1)
+      .stroke('#E5E5E5')
+
+    return finalY + 25
   }
 
   static addTechnologyStackOld(doc, proposal, textColor, startY = 0) {
@@ -1800,133 +1833,143 @@ export class PDFService {
   }
 
   static addTimeline(doc, proposal, black, primaryText, secondaryText, startY = 0) {
-    const timelineY = startY + 15
-    
-    // Clean section heading
-    doc.fillColor('#000000')
-      .fontSize(13)
-      .font('Helvetica-Bold')
-      .text('PROJECT TIMELINE', 40, timelineY)
+    const timelineY = startY + 20
 
-    // Thin line under heading
-    doc.moveTo(40, timelineY + 20)
-      .lineTo(555, timelineY + 20)
-      .lineWidth(1)
-      .stroke('#000000')
+    // Professional section heading with background
+    doc.rect(40, timelineY, 515, 35)
+      .fill('#F8F8F8')
     
-    let y = timelineY + 32
+    doc.fillColor('#000000')
+      .fontSize(12)
+      .font('Helvetica-Bold')
+      .text('PROJECT TIMELINE', 50, timelineY + 12)
+
+    let y = timelineY + 50
     
-    // Compact timeline summary
+    // Timeline summary box
     const timeline = proposal.timeline || {}
     
-    // Summary row
-    if (timeline.startDate || timeline.estimatedCompletionDate || timeline.duration) {
-      let summaryX = 40
+    doc.rect(40, y, 515, 40)
+      .fill('#FFFFFF')
+      .lineWidth(1)
+      .stroke('#E5E5E5')
+    
+    let summaryY = y + 12
+    let summaryX = 50
+    
+    if (timeline.startDate) {
+      doc.fillColor('#666666')
+        .fontSize(9)
+        .font('Helvetica')
+        .text('Start Date:', summaryX, summaryY)
       
-      if (timeline.startDate) {
-        doc.fillColor('#666666')
-          .fontSize(8)
-          .font('Helvetica')
-          .text('Start:', summaryX, y)
-        
-        doc.fillColor('#000000')
-          .fontSize(9)
-          .font('Helvetica-Bold')
-          .text(new Date(timeline.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), summaryX + 30, y)
-        
-        summaryX += 150
-      }
+      doc.fillColor('#000000')
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .text(new Date(timeline.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), summaryX + 70, summaryY)
       
-      if (timeline.estimatedCompletionDate) {
-        doc.fillColor('#666666')
-          .fontSize(8)
-          .font('Helvetica')
-          .text('End:', summaryX, y)
-        
-        doc.fillColor('#000000')
-          .fontSize(9)
-          .font('Helvetica-Bold')
-          .text(new Date(timeline.estimatedCompletionDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), summaryX + 30, y)
-        
-        summaryX += 150
-      }
-      
-      if (timeline.duration) {
-        doc.fillColor('#666666')
-          .fontSize(8)
-          .font('Helvetica')
-          .text('Duration:', summaryX, y)
-        
-        doc.fillColor('#000000')
-          .fontSize(9)
-          .font('Helvetica-Bold')
-          .text(timeline.duration, summaryX + 45, y)
-      }
-      
-      y += 20
+      summaryX += 180
     }
     
-    // Compact milestones
+    if (timeline.estimatedCompletionDate) {
+      doc.fillColor('#666666')
+        .fontSize(9)
+        .font('Helvetica')
+        .text('Completion:', summaryX, summaryY)
+      
+      doc.fillColor('#000000')
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .text(new Date(timeline.estimatedCompletionDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), summaryX + 70, summaryY)
+      
+      summaryX += 180
+    }
+    
+    if (timeline.duration) {
+      doc.fillColor('#666666')
+        .fontSize(9)
+        .font('Helvetica')
+        .text('Duration:', summaryX, summaryY)
+      
+      doc.fillColor('#000000')
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .text(timeline.duration, summaryX + 70, summaryY)
+    }
+    
+    y += 55
+    
+    // Professional milestones
     if (timeline.milestones && timeline.milestones.length > 0) {
       timeline.milestones.forEach((milestone, index) => {
-        // Clean milestone item
+        // Milestone card
+        doc.rect(40, y, 515, 55)
+          .fill('#FFFFFF')
+          .lineWidth(1)
+          .stroke('#E5E5E5')
+        
+        // Number circle
+        doc.circle(65, y + 27, 12)
+          .fill('#000000')
+        
+        doc.fillColor('#FFFFFF')
+          .fontSize(10)
+          .font('Helvetica-Bold')
+        .text(`${index + 1}`, 59, y + 21)
+        
+        // Milestone title
         doc.fillColor('#000000')
           .fontSize(10)
           .font('Helvetica-Bold')
-          .text(`${index + 1}. ${milestone.title || 'Milestone'}`, 40, y)
+          .text(milestone.title || 'Milestone', 85, y + 10, { width: 450 })
         
-        y += 12
-        
+        // Description
         if (milestone.description) {
           doc.fillColor('#666666')
             .fontSize(8)
             .font('Helvetica')
-            .text(milestone.description, 55, y, {
-            width: 500,
-            align: 'justify'
-          })
-          y += 12
+            .text(milestone.description, 85, y + 28, {
+              width: 450,
+              align: 'justify'
+            })
         }
         
+        // Expected date
         if (milestone.expectedDate) {
           doc.fillColor('#888888')
             .fontSize(8)
             .font('Helvetica')
-            .text(`Expected: ${new Date(milestone.expectedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 55, y)
-          y += 12
+            .text(`Expected: ${new Date(milestone.expectedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 85, y + 42)
         }
         
-        y += 8
+        y += 65
       })
     }
     
-    // Clean separator line
+    // Professional separator line
     doc.moveTo(40, y)
       .lineTo(555, y)
-      .lineWidth(0.5)
-      .stroke('#CCCCCC')
-    
-    return y + 20
+      .lineWidth(1)
+      .stroke('#E5E5E5')
+
+    return y + 25
   }
 
   static addProposalTable(doc, proposal, darkBlack, white, primaryText, veryLightGray, lightGray, startY = 0) {
-    const tableTop = startY + 15
-    const rowHeight = 30
+    const tableTop = startY + 20
+    const rowHeight = 35
     const items = proposal.items || []
     
-    // Clean section heading
-    doc.fillColor('#000000')
-      .fontSize(13)
-      .font('Helvetica-Bold')
-      .text('PRICING BREAKDOWN', 40, tableTop)
-
-    // Thin line under heading
-    doc.moveTo(40, tableTop + 20)
-      .lineTo(555, tableTop + 20)
-      .lineWidth(1)
-      .stroke('#000000')
+    // Professional section heading with background
+    doc.rect(40, tableTop, 515, 35)
+      .fill('#F8F8F8')
     
-    const actualTableTop = tableTop + 28
+    doc.fillColor('#000000')
+      .fontSize(12)
+      .font('Helvetica-Bold')
+      .text('PRICING BREAKDOWN', 50, tableTop + 12)
+
+    const actualTableTop = tableTop + 40
     
     // Handle missing items gracefully
     if (!items || items.length === 0) {
@@ -1936,25 +1979,25 @@ export class PDFService {
       return actualTableTop + 40
     }
     
-    // Clean table header
-    doc.rect(40, actualTableTop, 515, 25)
+    // Professional table header
+    doc.rect(40, actualTableTop, 515, 30)
       .fill('#000000')
     
     // Table headers - white text
     doc.fillColor('#FFFFFF')
-      .fontSize(9)
+      .fontSize(10)
       .font('Helvetica-Bold')
     
     const headers = ['DESCRIPTION', 'QTY', 'RATE', 'TOTAL']
-    const colWidths = [290, 80, 80, 90]
+    const colWidths = [280, 80, 80, 105]
     let x = 50
     
     headers.forEach((header, i) => {
-      doc.text(header, x, actualTableTop + 9)
+      doc.text(header, x, actualTableTop + 10)
       x += colWidths[i]
     })
     
-    // Table rows - clean alternating colors
+    // Table rows - professional alternating colors
     let y = actualTableTop + rowHeight
     let alternateColor = false
     
@@ -1962,16 +2005,16 @@ export class PDFService {
       // Alternate row colors
       if (alternateColor) {
         doc.rect(40, y, 515, rowHeight)
-          .fill('#F8F8F8')
+          .fill('#F9F9F9')
       } else {
         doc.rect(40, y, 515, rowHeight)
           .fill('#FFFFFF')
       }
       alternateColor = !alternateColor
       
-      // Item data - clean styling
+      // Item data - professional styling
       doc.fillColor('#333333')
-        .fontSize(9)
+        .fontSize(10)
         .font('Helvetica')
       
       x = 50
@@ -1981,34 +2024,34 @@ export class PDFService {
       if (!desc || desc === 'N/A') {
         desc = 'Product/Service'
       }
-      doc.text(desc.substring(0, 50), x, y + 10)
+      doc.text(desc.substring(0, 50), x, y + 12)
       x += colWidths[0]
       
-      // Quantity - centered
+      // Quantity - properly centered
       const quantity = parseFloat(item.quantity) || 1
-      doc.text(quantity.toString(), x + 40, y + 10, { align: 'center' })
+      doc.text(quantity.toString(), x + 40, y + 12, { align: 'center' })
       x += colWidths[1]
       
-      // Rate - right aligned
+      // Rate - properly right aligned
       const rate = parseFloat(item.rate) || 0
-      doc.text(`₹${rate.toFixed(2)}`, x + 40, y + 10, { align: 'right' })
+      doc.text(`₹${rate.toFixed(2)}`, x + 40, y + 12, { align: 'right' })
       x += colWidths[2]
       
-      // Total - right aligned
+      // Total - properly right aligned
       const total = parseFloat(item.total) || (rate * quantity)
       doc.fillColor('#000000')
         .font('Helvetica-Bold')
-        .text(`₹${total.toFixed(2)}`, x + 45, y + 10, { align: 'right' })
+        .text(`₹${total.toFixed(2)}`, x + 52, y + 12, { align: 'right' })
       
       y += rowHeight
     })
     
-    // Clean table border
+    // Professional table border
     doc.rect(40, actualTableTop, 515, y - actualTableTop)
-      .lineWidth(0.5)
-      .stroke('#CCCCCC')
+      .lineWidth(1)
+      .stroke('#E5E5E5')
     
-    return y + 12
+    return y + 15
   }
 
   static addProposalSummary(doc, proposal, black, white, primaryText, secondaryText, startY = 0) {
@@ -2018,175 +2061,176 @@ export class PDFService {
     const invoiceDiscount = parseFloat(proposal.invoiceDiscount) || 0
     const grandTotal = parseFloat(proposal.grandTotal) || 0
     
-    // Compact summary section
-    let y = startY + 15
+    // Professional summary section
+    let y = startY + 20
     const summaryX = 350
     
-    // Clean summary box
-    doc.rect(summaryX, y, 205, 90)
+    // Professional summary box
+    doc.rect(summaryX, y, 205, 110)
       .fill('#F8F8F8')
-      .lineWidth(0.5)
-      .stroke('#DDDDDD')
+      .lineWidth(1)
+      .stroke('#E5E5E5')
     
-    let innerY = y + 12
+    let innerY = y + 15
     
     // Sub Total
     doc.fillColor('#666666')
-      .fontSize(9)
+      .fontSize(10)
       .font('Helvetica')
-      .text('Subtotal', summaryX + 12, innerY)
+      .text('Subtotal', summaryX + 15, innerY)
     
     doc.fillColor('#000000')
       .font('Helvetica-Bold')
       .text(`₹${subtotal.toFixed(2)}`, summaryX + 190, innerY, { align: 'right' })
     
-    innerY += 18
+    innerY += 22
     
     // Discount (if any)
     const totalDiscount = itemDiscount + invoiceDiscount
     if (totalDiscount > 0) {
       doc.fillColor('#666666')
         .font('Helvetica')
-        .text('Discount', summaryX + 12, innerY)
+        .text('Discount', summaryX + 15, innerY)
       
       doc.fillColor('#000000')
         .font('Helvetica-Bold')
         .text(`-₹${totalDiscount.toFixed(2)}`, summaryX + 190, innerY, { align: 'right' })
       
-      innerY += 18
+      innerY += 22
     }
     
-    innerY += 8
+    innerY += 10
     
-    // Black TOTAL box - compact
-    doc.rect(summaryX + 12, innerY, 180, 35)
+    // Professional black TOTAL box
+    doc.rect(summaryX + 15, innerY, 175, 40)
       .fill('#000000')
     
     doc.fillColor('#FFFFFF')
-      .fontSize(8)
+      .fontSize(9)
       .font('Helvetica-Bold')
-      .text('TOTAL', summaryX + 20, innerY + 10)
+      .text('TOTAL INVESTMENT', summaryX + 25, innerY + 12)
     
     doc.fillColor('#FFFFFF')
-      .fontSize(14)
+      .fontSize(16)
       .font('Helvetica-Bold')
-      .text(`₹${grandTotal.toFixed(2)}`, summaryX + 20, innerY + 20)
+      .text(`₹${grandTotal.toFixed(2)}`, summaryX + 25, innerY + 25)
     
-    return y + 100
+    return y + 130
   }
 
   static addProposalPaymentTerms(doc, proposal, black, primaryText, secondaryText, startY = 0) {
-    const paymentTermsY = startY + 15
-    
-    // Clean section heading
-    doc.fillColor('#000000')
-      .fontSize(13)
-      .font('Helvetica-Bold')
-      .text('PAYMENT TERMS', 40, paymentTermsY)
+    const paymentTermsY = startY + 20
 
-    // Thin line under heading
-    doc.moveTo(40, paymentTermsY + 20)
-      .lineTo(555, paymentTermsY + 20)
-      .lineWidth(1)
-      .stroke('#000000')
+    // Professional section heading with background
+    doc.rect(40, paymentTermsY, 515, 35)
+      .fill('#F8F8F8')
     
-    let y = paymentTermsY + 32
+    doc.fillColor('#000000')
+      .fontSize(12)
+      .font('Helvetica-Bold')
+      .text('PAYMENT TERMS', 50, paymentTermsY + 12)
+
+    let y = paymentTermsY + 50
     
-    // Compact payment schedule
+    // Professional payment schedule
     if (proposal.paymentSchedule && proposal.paymentSchedule.length > 0) {
-      const cardWidth = 160
-      const cardGap = 8
+      const cardWidth = 165
+      const cardGap = 10
       
       proposal.paymentSchedule.forEach((payment, index) => {
         const cardX = 40 + (index * (cardWidth + cardGap))
         
-        // Compact payment card
-        doc.rect(cardX, y, cardWidth, 60)
-          .fill('#F8F8F8')
-          .lineWidth(0.5)
-          .stroke('#DDDDDD')
+        // Professional payment card
+        doc.rect(cardX, y, cardWidth, 75)
+          .fill('#FFFFFF')
+          .lineWidth(1)
+          .stroke('#E5E5E5')
         
         // Percentage - centered
         doc.fillColor('#000000')
-          .fontSize(18)
+          .fontSize(22)
           .font('Helvetica-Bold')
-          .text(`${payment.percentage || 0}%`, cardX + 12, y + 12, { width: cardWidth - 24, align: 'center' })
+          .text(`${payment.percentage || 0}%`, cardX + 15, y + 15, { width: cardWidth - 30, align: 'center' })
         
         // Stage name - centered
         doc.fillColor('#666666')
-          .fontSize(8)
+          .fontSize(9)
           .font('Helvetica')
-          .text(payment.stage || 'Stage', cardX + 12, y + 32, { width: cardWidth - 24, align: 'center' })
+          .text(payment.stage || 'Stage', cardX + 15, y + 40, { width: cardWidth - 30, align: 'center' })
         
         // Amount - centered
         const amount = payment.amount || 0
         doc.fillColor('#000000')
-          .fontSize(10)
+          .fontSize(11)
           .font('Helvetica-Bold')
-          .text(`₹${amount.toFixed(2)}`, cardX + 12, y + 46, { width: cardWidth - 24, align: 'center' })
+          .text(`₹${amount.toFixed(2)}`, cardX + 15, y + 55, { width: cardWidth - 30, align: 'center' })
       })
       
-      y += 70
+      y += 90
     } else if (proposal.paymentTerms) {
-      // Compact fallback payment terms text
+      // Professional fallback payment terms text
       doc.fillColor('#333333')
-        .fontSize(9)
+        .fontSize(10)
         .font('Helvetica')
         .text(proposal.paymentTerms, 40, y, {
           width: 515,
           align: 'justify'
         })
-      y += 25
+      y += 30
     }
     
-    // Clean separator line
+    // Professional separator line
     doc.moveTo(40, y)
       .lineTo(555, y)
-      .lineWidth(0.5)
-      .stroke('#CCCCCC')
-    
-    return y + 20
+      .lineWidth(1)
+      .stroke('#E5E5E5')
+
+    return y + 25
   }
 
   static addProposalAmountInWords(doc, proposal, black, primaryText, veryLightGray, startY = 0) {
-    const amountWordsY = startY + 15
-    
-    // Compact amount in words section
+    const amountWordsY = startY + 20
+
+    // Professional amount in words section
     doc.fillColor('#666666')
-      .fontSize(8)
+      .fontSize(9)
       .font('Helvetica-Bold')
       .text('AMOUNT IN WORDS', 40, amountWordsY)
     
     const amountWords = proposal.amountInWords || 'Rupees Only'
     doc.fillColor('#333333')
-      .fontSize(9)
+      .fontSize(10)
       .font('Helvetica')
-      .text(amountWords, 40, amountWordsY + 12, {
+      .text(amountWords, 40, amountWordsY + 15, {
         width: 515,
         align: 'justify'
       })
     
-    return amountWordsY + 30
+    return amountWordsY + 35
   }
 
   static addProposalNotes(doc, proposal, black, primaryText, secondaryText, startY = 0) {
-    const notesY = startY + 15
-    
+    const notesY = startY + 20
+
     if (proposal.notes) {
-      doc.fillColor('#666666')
-        .fontSize(8)
+      // Professional section heading with background
+      doc.rect(40, notesY, 515, 35)
+        .fill('#F8F8F8')
+      
+      doc.fillColor('#000000')
+        .fontSize(12)
         .font('Helvetica-Bold')
-        .text('NOTES', 40, notesY)
+        .text('NOTES', 50, notesY + 12)
       
       doc.fillColor('#333333')
-        .fontSize(9)
+        .fontSize(10)
         .font('Helvetica')
-        .text(proposal.notes, 40, notesY + 12, {
-          width: 515,
+        .text(proposal.notes, 50, notesY + 50, {
+          width: 495,
           align: 'justify'
         })
       
-      return notesY + 30
+      return notesY + 50
     }
     return notesY
   }
@@ -2214,194 +2258,220 @@ export class PDFService {
   }
 
   static addProposalBankDetails(doc, company, black, primaryText, secondaryText, startY = 0) {
-    const bankY = startY + 15
-    
+    const bankY = startY + 20
+
     const safeCompany = company || {}
     const bankDetails = safeCompany.bankDetails || {}
     
     if (bankDetails.bankName || bankDetails.accountNumber || bankDetails.ifsc) {
-      doc.fillColor('#666666')
-        .fontSize(8)
+      // Professional section heading with background
+      doc.rect(40, bankY, 515, 35)
+        .fill('#F8F8F8')
+      
+      doc.fillColor('#000000')
+        .fontSize(12)
         .font('Helvetica-Bold')
-        .text('BANK DETAILS', 40, bankY)
+        .text('BANK DETAILS', 50, bankY + 12)
       
-      let y = bankY + 15
+      let y = bankY + 50
       
-      // Compact single column layout
+      // Professional bank details box
+      doc.rect(40, y, 515, 80)
+        .fill('#FFFFFF')
+        .lineWidth(1)
+        .stroke('#E5E5E5')
+      
+      let innerY = y + 15
+      let col1X = 50
+      let col2X = 280
+      
       if (bankDetails.bankName) {
         doc.fillColor('#666666')
-          .fontSize(8)
-          .font('Helvetica')
-          .text('Bank:', 40, y)
-        doc.fillColor('#000000')
           .fontSize(9)
+          .font('Helvetica')
+          .text('Bank Name', col1X, innerY)
+        doc.fillColor('#000000')
+          .fontSize(10)
           .font('Helvetica-Bold')
-          .text(bankDetails.bankName, 80, y)
-        y += 14
+          .text(bankDetails.bankName, col1X, innerY + 12)
+        innerY += 30
       }
       
       if (bankDetails.accountNumber) {
         doc.fillColor('#666666')
-          .fontSize(8)
-          .font('Helvetica')
-          .text('Account:', 40, y)
-        doc.fillColor('#000000')
           .fontSize(9)
+          .font('Helvetica')
+          .text('Account Number', col1X, innerY)
+        doc.fillColor('#000000')
+          .fontSize(10)
           .font('Helvetica-Bold')
-          .text(bankDetails.accountNumber, 80, y)
-        y += 14
+          .text(bankDetails.accountNumber, col1X, innerY + 12)
+        innerY += 30
       }
+      
+      innerY = y + 15
       
       if (bankDetails.ifsc) {
         doc.fillColor('#666666')
-          .fontSize(8)
-          .font('Helvetica')
-          .text('IFSC:', 40, y)
-        doc.fillColor('#000000')
           .fontSize(9)
+          .font('Helvetica')
+          .text('IFSC Code', col2X, innerY)
+        doc.fillColor('#000000')
+          .fontSize(10)
           .font('Helvetica-Bold')
-          .text(bankDetails.ifsc, 80, y)
-        y += 14
+          .text(bankDetails.ifsc, col2X, innerY + 12)
+        innerY += 30
       }
       
       if (bankDetails.branch) {
         doc.fillColor('#666666')
-          .fontSize(8)
-          .font('Helvetica')
-          .text('Branch:', 40, y)
-        doc.fillColor('#000000')
           .fontSize(9)
+          .font('Helvetica')
+          .text('Branch', col2X, innerY)
+        doc.fillColor('#000000')
+          .fontSize(10)
           .font('Helvetica-Bold')
-          .text(bankDetails.branch, 80, y)
-        y += 14
+          .text(bankDetails.branch, col2X, innerY + 12)
       }
       
-      return bankY + 50
+      return bankY + 125
     }
     return bankY
   }
 
   static addProposalSignature(doc, proposal, company, black, primaryText, secondaryText, startY = 0) {
-    const signatureY = startY + 15
-    
+    const signatureY = startY + 20
+
     const safeCompany = company || {}
     
-    // Clean separator line
+    // Professional separator line
     doc.moveTo(40, signatureY)
       .lineTo(555, signatureY)
-      .lineWidth(0.5)
-      .stroke('#CCCCCC')
+      .lineWidth(1)
+      .stroke('#E5E5E5')
     
-    let currentY = signatureY + 15
+    let currentY = signatureY + 20
     
-    // Terms on left - compact
+    // Terms on left - professional
     if (proposal.termsAndConditions) {
       doc.fillColor('#666666')
-        .fontSize(8)
+        .fontSize(9)
         .font('Helvetica-Bold')
         .text('TERMS & CONDITIONS', 40, currentY)
       
       doc.fillColor('#333333')
-        .fontSize(8)
+        .fontSize(9)
         .font('Helvetica')
-        .text(proposal.termsAndConditions.substring(0, 400) + '...', 40, currentY + 12, {
+        .text(proposal.termsAndConditions.substring(0, 500) + '...', 40, currentY + 15, {
           width: 280,
           align: 'justify'
         })
     }
     
-    // Signature on right - compact
-    doc.rect(340, currentY, 200, 70)
-      .fill('#F8F8F8')
-      .lineWidth(0.5)
-      .stroke('#DDDDDD')
+    // Signature on right - professional
+    doc.rect(340, currentY, 200, 90)
+      .fill('#FFFFFF')
+      .lineWidth(1)
+      .stroke('#E5E5E5')
     
     // Signature line
-    doc.moveTo(350, currentY + 20)
-      .lineTo(530, currentY + 20)
-      .lineWidth(1)
+    doc.moveTo(350, currentY + 25)
+      .lineTo(530, currentY + 25)
+      .lineWidth(2)
       .stroke('#000000')
     
     // Signature details
-    let sigY = currentY + 30
+    let sigY = currentY + 35
     
     if (safeCompany.authorizedSignatory?.name) {
       doc.fillColor('#000000')
         .fontSize(10)
         .font('Helvetica-Bold')
         .text(safeCompany.authorizedSignatory.name, 350, sigY, { width: 180 })
-      sigY += 12
+      sigY += 15
       
       if (safeCompany.authorizedSignatory?.designation) {
         doc.fillColor('#666666')
-          .fontSize(8)
+          .fontSize(9)
           .font('Helvetica')
         .text(safeCompany.authorizedSignatory.designation, 350, sigY, { width: 180 })
-        sigY += 12
+        sigY += 15
       }
     } else {
       doc.fillColor('#000000')
-        .fontSize(10)
+        .fontSize(11)
         .font('Helvetica-Bold')
         .text('Authorized Signatory', 350, sigY, { width: 180 })
-      sigY += 12
+      sigY += 15
     }
     
     // Company name
     doc.fillColor('#888888')
-      .fontSize(7)
+      .fontSize(8)
       .font('Helvetica')
       .text(safeCompany.companyName || 'Datawyn Technologies', 350, sigY, { width: 180 })
     
-    currentY += 80
+    currentY += 100
     
     // Return the final Y position but cap it to avoid footer overlap
     return Math.min(currentY, 730)
   }
 
   static addProposalFooter(doc, company, black, mediumGray, startY = 750) {
-    // Compact footer - no background box
+    // Professional footer with background
     const footerY = Math.max(startY + 10, 750)
     const safeCompany = company || {}
     
-    // Thin separator line
+    // Professional footer background
+    doc.rect(0, footerY, 595.28, 60)
+      .fill('#F8F8F8')
+    
+    // Professional separator line
     doc.moveTo(40, footerY)
       .lineTo(555, footerY)
-      .lineWidth(0.5)
-      .stroke('#CCCCCC')
+      .lineWidth(1)
+      .stroke('#E5E5E5')
     
-    // Company details - compact
-    let footerTextY = footerY + 10
+    // Company details
+    let footerTextY = footerY + 15
     
-    doc.fillColor('#666666')
-      .fontSize(8)
-      .font('Helvetica')
+    doc.fillColor('#000000')
+      .fontSize(10)
+      .font('Helvetica-Bold')
       .text(safeCompany.companyName || 'DATAWYN TECHNOLOGIES', 40, footerTextY)
     
-    footerTextY += 10
+    footerTextY += 15
     
-    // Contact details - compact
-    const contactInfo = [safeCompany.email, safeCompany.phone].filter(Boolean).join(' • ')
+    // Contact details
+    const contactInfo = [safeCompany.email, safeCompany.phone].filter(Boolean).join(' | ')
     if (contactInfo) {
-      doc.fillColor('#888888')
-        .fontSize(7)
+      doc.fillColor('#666666')
+        .fontSize(8)
         .font('Helvetica')
         .text(contactInfo, 40, footerTextY)
-      footerTextY += 8
+      footerTextY += 12
+    }
+    
+    // Website if available
+    if (safeCompany.website) {
+      doc.fillColor('#666666')
+        .fontSize(8)
+        .font('Helvetica')
+        .text(safeCompany.website, 40, footerTextY)
     }
     
     // Confidential notice and page number
-    doc.fillColor('#AAAAAA')
-      .fontSize(7)
+    doc.fillColor('#888888')
+      .fontSize(8)
       .font('Helvetica')
-      .text('CONFIDENTIAL PROPOSAL', 40, footerTextY)
+      .text('CONFIDENTIAL PROPOSAL', 40, footerY + 45)
     
-    doc.fillColor('#AAAAAA')
-      .fontSize(7)
+    doc.fillColor('#888888')
+      .fontSize(8)
       .font('Helvetica')
-      .text('PAGE 1', 500, footerTextY, { align: 'right' })
+      .text('PAGE 1', 500, footerY + 45, { align: 'right' })
     
-    return footerY + 25
+    return footerY + 65
   }
 
   static addTimelineOld(doc, proposal, textColor, startY = 0) {
