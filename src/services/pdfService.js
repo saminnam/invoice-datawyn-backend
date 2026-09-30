@@ -2230,7 +2230,7 @@ export class PDFService {
           align: 'justify'
         })
       
-      return notesY + 50
+      return notesY + 70
     }
     return notesY
   }
