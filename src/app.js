@@ -23,6 +23,7 @@ import dashboardRoutes from './routes/dashboardRoutes.js'
 import userRoutes from './routes/userRoutes.js'
 import roleRoutes from './routes/roleRoutes.js'
 import permissionRoutes from './routes/permissionRoutes.js'
+import paymentRoutes from './routes/paymentRoutes.js'
 
 const app = express()
 
@@ -108,6 +109,7 @@ app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/roles', roleRoutes)
 app.use('/api/permissions', permissionRoutes)
+app.use('/api/payments', paymentRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

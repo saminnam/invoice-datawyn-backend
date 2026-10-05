@@ -173,6 +173,12 @@ const proformaInvoiceSchema = new mongoose.Schema({
   dueDate: Date,
   placeOfSupply: String,
   
+  // Payment Plan Reference
+  paymentPlan: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PaymentPlan',
+  },
+  
   // Additional Information
   notes: String,
   termsAndConditions: String,

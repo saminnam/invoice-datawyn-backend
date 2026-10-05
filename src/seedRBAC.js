@@ -69,7 +69,13 @@ const seedRBAC = async () => {
       
       // Reports permissions
       { name: 'reports.view', description: 'View reports', module: 'reports', action: 'read' },
-      { name: 'reports.export', description: 'Export reports', module: 'reports', action: 'manage' }
+      { name: 'reports.export', description: 'Export reports', module: 'reports', action: 'manage' },
+      
+      // Payment permissions
+      { name: 'payment.view', description: 'View payment plans and transactions', module: 'payment', action: 'read' },
+      { name: 'payment.create', description: 'Create payment plans', module: 'payment', action: 'create' },
+      { name: 'payment.edit', description: 'Edit payment plans and record payments', module: 'payment', action: 'update' },
+      { name: 'payment.delete', description: 'Delete payment plans', module: 'payment', action: 'delete' }
     ])
     console.log('Created permissions')
 

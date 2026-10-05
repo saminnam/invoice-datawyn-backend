@@ -6,6 +6,8 @@ import { CalculationService } from '../services/calculationService.js'
 import { PDFService } from '../services/pdfService.js'
 import { EmailService } from '../services/emailService.js'
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.js'
+import PaymentPlanService from '../services/paymentPlanService.js'
+import { createPaymentPlan } from './paymentController.js'
 
 export const getProformaInvoices = async (req, res, next) => {
   try {
@@ -69,7 +71,7 @@ export const getProformaInvoice = async (req, res, next) => {
 
 export const createProformaInvoice = async (req, res, next) => {
   try {
-    const { customer, items, ...invoiceData } = req.body
+    const { customer, items, paymentPlan, ...invoiceData } = req.body
     
     // Validate customer
     if (!customer) {
@@ -163,6 +165,69 @@ export const createProformaInvoice = async (req, res, next) => {
       createdBy: req.user._id,
       ...invoiceData
     })
+    
+    // Create payment plan if provided
+    if (paymentPlan && paymentPlan.planType) {
+      try {
+        const PaymentPlan = (await import('../models/PaymentPlan.js')).default
+        const PaymentInstallment = (await import('../models/PaymentInstallment.js')).default
+        
+        const paymentSchedule = PaymentPlanService.generatePaymentSchedule(
+          paymentPlan.planType,
+          paymentPlan.paymentMethod,
+          calculations.grandTotal,
+          {
+            invoiceDate: invoiceData.invoiceDate,
+            paymentSchedule: paymentPlan.paymentSchedule,
+            emiDetails: paymentPlan.emiDetails,
+            balanceDueDate: paymentPlan.balanceDueDate,
+          }
+        )
+        
+        // Validate payment schedule
+        const validation = PaymentPlanService.validatePaymentSchedule(paymentSchedule, calculations.grandTotal)
+        if (!validation.valid) {
+          return errorResponse(res, validation.error)
+        }
+        
+        // Create payment plan
+        const newPaymentPlan = await PaymentPlan.create({
+          invoiceType: 'proforma',
+          invoiceId: invoice._id,
+          invoiceNumber: invoice.invoiceNumber,
+          customer,
+          planType: paymentPlan.planType,
+          paymentMethod: paymentPlan.paymentMethod,
+          totalAmount: calculations.grandTotal,
+          remainingAmount: calculations.grandTotal,
+          emiDetails: paymentPlan.emiDetails,
+          createdBy: req.user._id,
+        })
+        
+        // Create installments
+        for (let i = 0; i < paymentSchedule.length; i++) {
+          const schedule = paymentSchedule[i]
+          await PaymentInstallment.create({
+            paymentPlan: newPaymentPlan._id,
+            installmentNumber: i + 1,
+            paymentName: schedule.paymentName,
+            paymentType: schedule.paymentType,
+            scheduledAmount: schedule.amount,
+            percentage: schedule.percentage,
+            dueDate: schedule.dueDate,
+            remainingAmount: schedule.amount,
+            status: 'pending',
+          })
+        }
+        
+        // Update invoice with payment plan reference
+        invoice.paymentPlan = newPaymentPlan._id
+        await invoice.save()
+      } catch (paymentError) {
+        console.error('Payment plan creation failed:', paymentError)
+        // Continue without payment plan if it fails
+      }
+    }
     
     successResponse(res, invoice, 'Proforma invoice created successfully', 201)
   } catch (error) {
