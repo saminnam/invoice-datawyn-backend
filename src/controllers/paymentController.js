@@ -402,23 +402,29 @@ export const deletePaymentPlan = async (req, res, next) => {
 export const getCustomerPaymentSummary = async (req, res, next) => {
   try {
     const { customer } = req.params
-    
+
+    console.log('Fetching payment summary for customer:', customer)
+
     // Get all payment plans for customer
     const paymentPlans = await PaymentPlan.find({ customer })
       .populate('invoiceId', 'invoiceNumber')
-    
+
+    console.log('Found payment plans:', paymentPlans.length)
+
     // Get all installments
     const installmentIds = paymentPlans.map(p => p._id)
     const installments = await PaymentInstallment.find({
       paymentPlan: { $in: installmentIds },
     })
-    
+
+    console.log('Found installments:', installments.length)
+
     // Check overdue status
     for (const installment of installments) {
       checkOverdueStatus(installment)
       await installment.save()
     }
-    
+
     // Calculate summary
     const totalInvoiceAmount = paymentPlans.reduce((sum, p) => sum + p.totalAmount, 0)
     const totalPaid = paymentPlans.reduce((sum, p) => sum + p.totalPaid, 0)
@@ -426,12 +432,12 @@ export const getCustomerPaymentSummary = async (req, res, next) => {
     const pendingInstallments = installments.filter(inst => inst.status === 'pending').length
     const paidInstallments = installments.filter(inst => inst.status === 'paid').length
     const overdueInstallments = installments.filter(inst => inst.isOverdue).length
-    
+
     // Get next payment
     const nextPayment = installments
       .filter(inst => inst.status === 'pending' && !inst.isOverdue)
       .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0]
-    
+
     successResponse(res, {
       summary: {
         totalInvoiceAmount,
@@ -447,6 +453,7 @@ export const getCustomerPaymentSummary = async (req, res, next) => {
       installments,
     })
   } catch (error) {
+    console.error('Error in getCustomerPaymentSummary:', error)
     next(error)
   }
 }
