@@ -38,6 +38,7 @@ export const getProformaInvoices = async (req, res, next) => {
         .skip(skip)
         .limit(parseInt(limit))
         .populate('customer', 'companyName')
+        .populate('paymentPlan')
         .populate('createdBy', 'name'),
       ProformaInvoice.countDocuments(query)
     ])
@@ -57,12 +58,13 @@ export const getProformaInvoice = async (req, res, next) => {
   try {
     const invoice = await ProformaInvoice.findById(req.params.id)
       .populate('customer', 'companyName')
+      .populate('paymentPlan')
       .populate('createdBy', 'name')
-    
+
     if (!invoice) {
       return errorResponse(res, 'Invoice not found', [], 404)
     }
-    
+
     successResponse(res, invoice)
   } catch (error) {
     next(error)
@@ -237,17 +239,17 @@ export const createProformaInvoice = async (req, res, next) => {
 
 export const updateProformaInvoice = async (req, res, next) => {
   try {
-    const { customer, items, ...invoiceData } = req.body
-    
+    const { customer, items, paymentPlan, ...invoiceData } = req.body
+
     const invoice = await ProformaInvoice.findById(req.params.id)
     if (!invoice) {
       return errorResponse(res, 'Invoice not found', [], 404)
     }
-    
+
     // Get company settings
     const companySettings = await CompanySettings.findOne()
     const companyStateCode = companySettings?.address?.stateCode || ''
-    
+
     // Recalculate if items provided
     let calculations
     if (items && items.length > 0) {
@@ -264,11 +266,11 @@ export const updateProformaInvoice = async (req, res, next) => {
         state: customerDoc.billingAddress?.state,
         stateCode: customerDoc.billingAddress?.stateCode
       }
-      
+
       const itemsWithSnapshots = await Promise.all(items.map(async (item) => {
         const Product = (await import('../models/Product.js')).default
         const product = await Product.findById(item.product)
-        
+
         return {
           ...item,
           productSnapshot: {
@@ -281,13 +283,13 @@ export const updateProformaInvoice = async (req, res, next) => {
           customerStateCode: customerDoc.billingAddress?.stateCode
         }
       }))
-      
+
       calculations = CalculationService.calculateInvoice(
         { items: itemsWithSnapshots, ...invoiceData, enableGST: invoiceData.enableGST !== undefined ? invoiceData.enableGST : true },
         companyStateCode
       )
     }
-    
+
     const updateData = calculations ? {
       items: calculations.items,
       subtotal: calculations.subtotal,
@@ -303,13 +305,123 @@ export const updateProformaInvoice = async (req, res, next) => {
       amountInWords: calculations.amountInWords,
       ...invoiceData
     } : invoiceData
-    
+
     const updatedInvoice = await ProformaInvoice.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true, runValidators: true }
     ).populate('customer', 'companyName')
-    
+
+    // Handle payment plan update
+    if (paymentPlan && paymentPlan.planType) {
+      try {
+        const PaymentPlan = (await import('../models/PaymentPlan.js')).default
+        const PaymentInstallment = (await import('../models/PaymentInstallment.js')).default
+
+        // If there's an existing payment plan, update it
+        if (invoice.paymentPlan) {
+          const paymentSchedule = PaymentPlanService.generatePaymentSchedule(
+            paymentPlan.planType,
+            paymentPlan.paymentMethod,
+            calculations?.grandTotal || invoice.grandTotal,
+            {
+              invoiceDate: invoiceData.invoiceDate || invoice.invoiceDate,
+              paymentSchedule: paymentPlan.paymentSchedule,
+              emiDetails: paymentPlan.emiDetails,
+              balanceDueDate: paymentPlan.balanceDueDate,
+            }
+          )
+
+          // Validate payment schedule
+          const validation = PaymentPlanService.validatePaymentSchedule(paymentSchedule, calculations?.grandTotal || invoice.grandTotal)
+          if (!validation.valid) {
+            return errorResponse(res, validation.error)
+          }
+
+          // Update payment plan
+          await PaymentPlan.findByIdAndUpdate(invoice.paymentPlan, {
+            planType: paymentPlan.planType,
+            paymentMethod: paymentPlan.paymentMethod,
+            totalAmount: calculations?.grandTotal || invoice.grandTotal,
+            emiDetails: paymentPlan.emiDetails,
+          })
+
+          // Delete existing installments and create new ones
+          await PaymentInstallment.deleteMany({ paymentPlan: invoice.paymentPlan })
+          for (let i = 0; i < paymentSchedule.length; i++) {
+            const schedule = paymentSchedule[i]
+            await PaymentInstallment.create({
+              paymentPlan: invoice.paymentPlan,
+              installmentNumber: i + 1,
+              paymentName: schedule.paymentName,
+              paymentType: schedule.paymentType,
+              scheduledAmount: schedule.amount,
+              percentage: schedule.percentage,
+              dueDate: schedule.dueDate,
+              remainingAmount: schedule.amount,
+              status: 'pending',
+            })
+          }
+        } else {
+          // Create new payment plan
+          const paymentSchedule = PaymentPlanService.generatePaymentSchedule(
+            paymentPlan.planType,
+            paymentPlan.paymentMethod,
+            calculations?.grandTotal || invoice.grandTotal,
+            {
+              invoiceDate: invoiceData.invoiceDate || invoice.invoiceDate,
+              paymentSchedule: paymentPlan.paymentSchedule,
+              emiDetails: paymentPlan.emiDetails,
+              balanceDueDate: paymentPlan.balanceDueDate,
+            }
+          )
+
+          // Validate payment schedule
+          const validation = PaymentPlanService.validatePaymentSchedule(paymentSchedule, calculations?.grandTotal || invoice.grandTotal)
+          if (!validation.valid) {
+            return errorResponse(res, validation.error)
+          }
+
+          // Create payment plan
+          const newPaymentPlan = await PaymentPlan.create({
+            invoiceType: 'proforma',
+            invoiceId: invoice._id,
+            invoiceNumber: invoice.invoiceNumber,
+            customer: invoice.customer,
+            planType: paymentPlan.planType,
+            paymentMethod: paymentPlan.paymentMethod,
+            totalAmount: calculations?.grandTotal || invoice.grandTotal,
+            remainingAmount: calculations?.grandTotal || invoice.grandTotal,
+            emiDetails: paymentPlan.emiDetails,
+            createdBy: req.user._id,
+          })
+
+          // Create installments
+          for (let i = 0; i < paymentSchedule.length; i++) {
+            const schedule = paymentSchedule[i]
+            await PaymentInstallment.create({
+              paymentPlan: newPaymentPlan._id,
+              installmentNumber: i + 1,
+              paymentName: schedule.paymentName,
+              paymentType: schedule.paymentType,
+              scheduledAmount: schedule.amount,
+              percentage: schedule.percentage,
+              dueDate: schedule.dueDate,
+              remainingAmount: schedule.amount,
+              status: 'pending',
+            })
+          }
+
+          // Update invoice with payment plan reference
+          updatedInvoice.paymentPlan = newPaymentPlan._id
+          await updatedInvoice.save()
+        }
+      } catch (paymentError) {
+        console.error('Payment plan update failed:', paymentError)
+        // Continue without payment plan if it fails
+      }
+    }
+
     successResponse(res, updatedInvoice, 'Proforma invoice updated successfully')
   } catch (error) {
     next(error)

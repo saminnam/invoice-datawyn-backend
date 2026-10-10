@@ -35,6 +35,7 @@ export const getInvoices = async (req, res, next) => {
         .limit(parseInt(limit))
         .populate('customer', 'companyName')
         .populate('proformaInvoice', 'invoiceNumber')
+        .populate('paymentPlan')
         .populate('createdBy', 'name'),
       Invoice.countDocuments(query)
     ])
@@ -55,12 +56,13 @@ export const getInvoice = async (req, res, next) => {
     const invoice = await Invoice.findById(req.params.id)
       .populate('customer', 'companyName')
       .populate('proformaInvoice', 'invoiceNumber')
+      .populate('paymentPlan')
       .populate('createdBy', 'name')
-    
+
     if (!invoice) {
       return errorResponse(res, 'Invoice not found', [], 404)
     }
-    
+
     successResponse(res, invoice)
   } catch (error) {
     next(error)
