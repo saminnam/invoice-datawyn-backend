@@ -33,7 +33,10 @@ const paymentPlanSchema = new mongoose.Schema({
   // Payment Method (for custom plans)
   paymentMethod: {
     type: String,
-    enum: ['fixed_amount', 'percentage_based', 'emi'],
+    enum: {
+      values: ['fixed_amount', 'percentage_based', 'emi'],
+      message: '{VALUE} is not a valid payment method'
+    },
   },
   
   // Total invoice amount

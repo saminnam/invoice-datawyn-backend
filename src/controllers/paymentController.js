@@ -90,7 +90,7 @@ export const createPaymentPlan = async (req, res, next) => {
       invoiceNumber,
       customer,
       planType: dbPlanType,
-      paymentMethod,
+      ...(paymentMethod && { paymentMethod }),
       totalAmount,
       remainingAmount: totalAmount,
       emiDetails,
