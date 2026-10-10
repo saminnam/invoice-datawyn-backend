@@ -173,7 +173,16 @@ export const createProformaInvoice = async (req, res, next) => {
       try {
         const PaymentPlan = (await import('../models/PaymentPlan.js')).default
         const PaymentInstallment = (await import('../models/PaymentInstallment.js')).default
-        
+
+        console.log('Creating payment plan with data:', {
+          planType: paymentPlan.planType,
+          paymentMethod: paymentPlan.paymentMethod,
+          totalAmount: calculations.grandTotal,
+          hasPaymentSchedule: !!paymentPlan.paymentSchedule,
+          hasEmiDetails: !!paymentPlan.emiDetails,
+          hasBalanceDueDate: !!paymentPlan.balanceDueDate
+        })
+
         const paymentSchedule = PaymentPlanService.generatePaymentSchedule(
           paymentPlan.planType,
           paymentPlan.paymentMethod,
@@ -185,13 +194,16 @@ export const createProformaInvoice = async (req, res, next) => {
             balanceDueDate: paymentPlan.balanceDueDate,
           }
         )
-        
+
+        console.log('Generated payment schedule:', paymentSchedule)
+
         // Validate payment schedule
         const validation = PaymentPlanService.validatePaymentSchedule(paymentSchedule, calculations.grandTotal)
         if (!validation.valid) {
+          console.error('Payment schedule validation failed:', validation.error)
           return errorResponse(res, validation.error)
         }
-        
+
         // Create payment plan
         const newPaymentPlan = await PaymentPlan.create({
           invoiceType: 'proforma',
@@ -205,7 +217,9 @@ export const createProformaInvoice = async (req, res, next) => {
           emiDetails: paymentPlan.emiDetails,
           createdBy: req.user._id,
         })
-        
+
+        console.log('Created payment plan:', newPaymentPlan._id)
+
         // Create installments
         for (let i = 0; i < paymentSchedule.length; i++) {
           const schedule = paymentSchedule[i]
@@ -221,13 +235,19 @@ export const createProformaInvoice = async (req, res, next) => {
             status: 'pending',
           })
         }
-        
+
+        console.log('Created installments for payment plan:', newPaymentPlan._id)
+
         // Update invoice with payment plan reference
         invoice.paymentPlan = newPaymentPlan._id
         await invoice.save()
+
+        console.log('Updated invoice with payment plan reference')
       } catch (paymentError) {
         console.error('Payment plan creation failed:', paymentError)
-        // Continue without payment plan if it fails
+        console.error('Error stack:', paymentError.stack)
+        // Return error instead of continuing silently
+        return errorResponse(res, `Failed to create payment plan: ${paymentError.message}`)
       }
     }
     

@@ -7,23 +7,36 @@ class PaymentPlanService {
    */
   static generatePaymentSchedule(planType, paymentMethod, totalAmount, options = {}) {
     const { invoiceDate, paymentSchedule, emiDetails } = options
-    
+
     switch (planType) {
       case 'full_payment':
         return this.generateFullPaymentSchedule(totalAmount, invoiceDate)
-      
+
       case 'advance_50':
         return this.generateAdvance50Schedule(totalAmount, invoiceDate, options.balanceDueDate)
-      
+
       case 'custom_fixed':
         return this.generateFixedAmountSchedule(paymentSchedule)
-      
+
       case 'custom_percentage':
         return this.generatePercentageSchedule(totalAmount, paymentSchedule)
-      
+
       case 'emi':
         return this.generateEMISchedule(totalAmount, emiDetails)
-      
+
+      case 'custom_payment':
+        // Handle custom_payment plan type from frontend
+        if (paymentMethod === 'fixed_amount') {
+          return this.generateFixedAmountSchedule(paymentSchedule)
+        }
+        if (paymentMethod === 'percentage_based') {
+          return this.generatePercentageSchedule(totalAmount, paymentSchedule)
+        }
+        if (paymentMethod === 'emi') {
+          return this.generateEMISchedule(totalAmount, emiDetails)
+        }
+        throw new Error(`Invalid payment method for custom_payment: ${paymentMethod}`)
+
       default:
         throw new Error(`Invalid plan type: ${planType}`)
     }
@@ -159,27 +172,31 @@ class PaymentPlanService {
     if (!schedule || schedule.length === 0) {
       return { valid: false, error: 'Payment schedule is empty' }
     }
-    
+
     const totalScheduled = schedule.reduce((sum, item) => sum + (item.amount || 0), 0)
-    
-    if (Math.abs(totalScheduled - totalAmount) > 0.01) {
+
+    // Allow small rounding differences for percentage-based plans
+    if (Math.abs(totalScheduled - totalAmount) > 1) {
       return {
         valid: false,
         error: `Total scheduled amount (${totalScheduled}) must equal invoice amount (${totalAmount})`
       }
     }
-    
-    // Validate due dates
+
+    // Validate due dates - allow same day but not past
     const now = new Date()
+    now.setHours(0, 0, 0, 0) // Set to start of day for comparison
     for (const item of schedule) {
       if (!item.dueDate) {
         return { valid: false, error: 'All payments must have a due date' }
       }
-      if (new Date(item.dueDate) < now) {
+      const dueDate = new Date(item.dueDate)
+      dueDate.setHours(0, 0, 0, 0)
+      if (dueDate < now) {
         return { valid: false, error: 'Due dates cannot be in the past' }
       }
     }
-    
+
     return { valid: true }
   }
   
