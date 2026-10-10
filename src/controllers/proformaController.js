@@ -377,8 +377,8 @@ export const updateProformaInvoice = async (req, res, next) => {
             }
           )
 
-          // Validate payment schedule
-          const validation = PaymentPlanService.validatePaymentSchedule(paymentSchedule, calculations?.grandTotal || invoice.grandTotal)
+          // Validate payment schedule (allow past dates for updates)
+          const validation = PaymentPlanService.validatePaymentSchedule(paymentSchedule, calculations?.grandTotal || invoice.grandTotal, true)
           if (!validation.valid) {
             return errorResponse(res, validation.error)
           }
@@ -421,8 +421,8 @@ export const updateProformaInvoice = async (req, res, next) => {
             }
           )
 
-          // Validate payment schedule
-          const validation = PaymentPlanService.validatePaymentSchedule(paymentSchedule, calculations?.grandTotal || invoice.grandTotal)
+          // Validate payment schedule (allow past dates for updates)
+          const validation = PaymentPlanService.validatePaymentSchedule(paymentSchedule, calculations?.grandTotal || invoice.grandTotal, true)
           if (!validation.valid) {
             return errorResponse(res, validation.error)
           }

@@ -168,7 +168,7 @@ class PaymentPlanService {
   /**
    * Validate payment schedule against invoice amount
    */
-  static validatePaymentSchedule(schedule, totalAmount) {
+  static validatePaymentSchedule(schedule, totalAmount, allowPastDates = false) {
     if (!schedule || schedule.length === 0) {
       return { valid: false, error: 'Payment schedule is empty' }
     }
@@ -183,17 +183,26 @@ class PaymentPlanService {
       }
     }
 
-    // Validate due dates - allow same day but not past
-    const now = new Date()
-    now.setHours(0, 0, 0, 0) // Set to start of day for comparison
-    for (const item of schedule) {
-      if (!item.dueDate) {
-        return { valid: false, error: 'All payments must have a due date' }
+    // Validate due dates - only enforce past date check for new invoices
+    if (!allowPastDates) {
+      const now = new Date()
+      now.setHours(0, 0, 0, 0) // Set to start of day for comparison
+      for (const item of schedule) {
+        if (!item.dueDate) {
+          return { valid: false, error: 'All payments must have a due date' }
+        }
+        const dueDate = new Date(item.dueDate)
+        dueDate.setHours(0, 0, 0, 0)
+        if (dueDate < now) {
+          return { valid: false, error: 'Due dates cannot be in the past' }
+        }
       }
-      const dueDate = new Date(item.dueDate)
-      dueDate.setHours(0, 0, 0, 0)
-      if (dueDate < now) {
-        return { valid: false, error: 'Due dates cannot be in the past' }
+    } else {
+      // When allowing past dates, just ensure dates exist
+      for (const item of schedule) {
+        if (!item.dueDate) {
+          return { valid: false, error: 'All payments must have a due date' }
+        }
       }
     }
 
