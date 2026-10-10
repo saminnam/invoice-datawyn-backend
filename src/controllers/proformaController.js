@@ -185,6 +185,23 @@ export const createProformaInvoice = async (req, res, next) => {
           customerType: typeof customer
         })
 
+        // Map custom_payment to the appropriate subtype for database storage
+        let dbPlanType = paymentPlan.planType
+        if (paymentPlan.planType === 'custom_payment') {
+          if (!paymentPlan.paymentMethod) {
+            return errorResponse(res, 'Payment method is required for custom payment plans')
+          }
+          if (paymentPlan.paymentMethod === 'fixed_amount') {
+            dbPlanType = 'custom_fixed'
+          } else if (paymentPlan.paymentMethod === 'percentage_based') {
+            dbPlanType = 'custom_percentage'
+          } else if (paymentPlan.paymentMethod === 'emi') {
+            dbPlanType = 'emi'
+          } else {
+            return errorResponse(res, `Invalid payment method: ${paymentPlan.paymentMethod}`)
+          }
+        }
+
         const paymentSchedule = PaymentPlanService.generatePaymentSchedule(
           paymentPlan.planType,
           paymentPlan.paymentMethod,
@@ -209,13 +226,14 @@ export const createProformaInvoice = async (req, res, next) => {
         // Create payment plan
         console.log('Creating payment plan with customer:', customer)
         console.log('Customer ID type:', typeof customer)
+        console.log('Using planType for DB:', dbPlanType, '(original:', paymentPlan.planType + ')')
 
         const newPaymentPlan = await PaymentPlan.create({
           invoiceType: 'proforma',
           invoiceId: invoice._id,
           invoiceNumber: invoice.invoiceNumber,
           customer,
-          planType: paymentPlan.planType,
+          planType: dbPlanType,
           paymentMethod: paymentPlan.paymentMethod,
           totalAmount: calculations.grandTotal,
           remainingAmount: calculations.grandTotal,
@@ -409,13 +427,30 @@ export const updateProformaInvoice = async (req, res, next) => {
             return errorResponse(res, validation.error)
           }
 
+          // Map custom_payment to the appropriate subtype for database storage
+          let dbPlanType = paymentPlan.planType
+          if (paymentPlan.planType === 'custom_payment') {
+            if (!paymentPlan.paymentMethod) {
+              return errorResponse(res, 'Payment method is required for custom payment plans')
+            }
+            if (paymentPlan.paymentMethod === 'fixed_amount') {
+              dbPlanType = 'custom_fixed'
+            } else if (paymentPlan.paymentMethod === 'percentage_based') {
+              dbPlanType = 'custom_percentage'
+            } else if (paymentPlan.paymentMethod === 'emi') {
+              dbPlanType = 'emi'
+            } else {
+              return errorResponse(res, `Invalid payment method: ${paymentPlan.paymentMethod}`)
+            }
+          }
+
           // Create payment plan
           const newPaymentPlan = await PaymentPlan.create({
             invoiceType: 'proforma',
             invoiceId: invoice._id,
             invoiceNumber: invoice.invoiceNumber,
             customer: invoice.customer,
-            planType: paymentPlan.planType,
+            planType: dbPlanType,
             paymentMethod: paymentPlan.paymentMethod,
             totalAmount: calculations?.grandTotal || invoice.grandTotal,
             remainingAmount: calculations?.grandTotal || invoice.grandTotal,

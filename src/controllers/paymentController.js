@@ -65,14 +65,31 @@ export const createPaymentPlan = async (req, res, next) => {
         return errorResponse(res, `Total percentage (${totalPercentage}%) must equal 100%`)
       }
     }
-    
+
+    // Map custom_payment to the appropriate subtype for database storage
+    let dbPlanType = planType
+    if (planType === 'custom_payment') {
+      if (!paymentMethod) {
+        return errorResponse(res, 'Payment method is required for custom payment plans')
+      }
+      if (paymentMethod === 'fixed_amount') {
+        dbPlanType = 'custom_fixed'
+      } else if (paymentMethod === 'percentage_based') {
+        dbPlanType = 'custom_percentage'
+      } else if (paymentMethod === 'emi') {
+        dbPlanType = 'emi'
+      } else {
+        return errorResponse(res, `Invalid payment method: ${paymentMethod}`)
+      }
+    }
+
     // Create payment plan
     const paymentPlan = await PaymentPlan.create({
       invoiceType,
       invoiceId,
       invoiceNumber,
       customer,
-      planType,
+      planType: dbPlanType,
       paymentMethod,
       totalAmount,
       remainingAmount: totalAmount,
