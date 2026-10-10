@@ -199,6 +199,33 @@ export const getPaymentPlanByInvoice = async (req, res, next) => {
   }
 }
 
+// Get All Payment Plans
+export const getAllPaymentPlans = async (req, res, next) => {
+  try {
+    const paymentPlans = await PaymentPlan.find()
+      .populate('customer', 'companyName name')
+      .sort({ createdAt: -1 })
+
+    // Calculate stats
+    const totalAmount = paymentPlans.reduce((sum, plan) => sum + plan.totalAmount, 0)
+    const totalPaid = paymentPlans.reduce((sum, plan) => sum + plan.totalPaid, 0)
+    const totalPending = paymentPlans.reduce((sum, plan) => sum + plan.remainingAmount, 0)
+    const activePlans = paymentPlans.filter(plan => plan.status === 'active').length
+
+    successResponse(res, {
+      paymentPlans,
+      stats: {
+        totalAmount,
+        totalPaid,
+        totalPending,
+        activePlans
+      }
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 // Record Payment
 export const recordPayment = async (req, res, next) => {
   try {

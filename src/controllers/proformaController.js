@@ -492,12 +492,27 @@ export const updateProformaInvoice = async (req, res, next) => {
 
 export const deleteProformaInvoice = async (req, res, next) => {
   try {
-    const invoice = await ProformaInvoice.findByIdAndDelete(req.params.id)
-    
+    const invoice = await ProformaInvoice.findById(req.params.id)
+
     if (!invoice) {
       return errorResponse(res, 'Invoice not found', [], 404)
     }
-    
+
+    // Delete associated payment plan and installments if exists
+    if (invoice.paymentPlan) {
+      const PaymentPlan = (await import('../models/PaymentPlan.js')).default
+      const PaymentInstallment = (await import('../models/PaymentInstallment.js')).default
+
+      // Delete payment installments first
+      await PaymentInstallment.deleteMany({ paymentPlan: invoice.paymentPlan })
+
+      // Delete payment plan
+      await PaymentPlan.findByIdAndDelete(invoice.paymentPlan)
+    }
+
+    // Delete the invoice
+    await ProformaInvoice.findByIdAndDelete(req.params.id)
+
     successResponse(res, null, 'Proforma invoice deleted successfully')
   } catch (error) {
     next(error)

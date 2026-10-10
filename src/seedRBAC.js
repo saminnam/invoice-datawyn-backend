@@ -19,58 +19,58 @@ const seedRBAC = async () => {
       // Dashboard permissions
       { name: 'dashboard.view', description: 'View dashboard', module: 'dashboard', action: 'read' },
       { name: 'dashboard.view_invoice_value', description: 'View total invoice value card', module: 'dashboard', action: 'read' },
-      
+
       // Customer permissions
       { name: 'customers.view', description: 'View customers', module: 'customers', action: 'read' },
       { name: 'customers.create', description: 'Create customers', module: 'customers', action: 'create' },
       { name: 'customers.edit', description: 'Edit customers', module: 'customers', action: 'update' },
       { name: 'customers.delete', description: 'Delete customers', module: 'customers', action: 'delete' },
-      
+
       // Product permissions
       { name: 'products.view', description: 'View products', module: 'products', action: 'read' },
       { name: 'products.create', description: 'Create products', module: 'products', action: 'create' },
       { name: 'products.edit', description: 'Edit products', module: 'products', action: 'update' },
       { name: 'products.delete', description: 'Delete products', module: 'products', action: 'delete' },
-      
+
       // Proforma invoice permissions
       { name: 'proforma.view', description: 'View proforma invoices', module: 'proforma', action: 'read' },
       { name: 'proforma.create', description: 'Create proforma invoices', module: 'proforma', action: 'create' },
       { name: 'proforma.edit', description: 'Edit proforma invoices', module: 'proforma', action: 'update' },
       { name: 'proforma.delete', description: 'Delete proforma invoices', module: 'proforma', action: 'delete' },
       { name: 'proforma.convert', description: 'Convert proforma to invoice', module: 'proforma', action: 'manage' },
-      
+
       // Proposal permissions
       { name: 'proposals.view', description: 'View proposals', module: 'proposals', action: 'read' },
       { name: 'proposals.create', description: 'Create proposals', module: 'proposals', action: 'create' },
       { name: 'proposals.edit', description: 'Edit proposals', module: 'proposals', action: 'update' },
       { name: 'proposals.delete', description: 'Delete proposals', module: 'proposals', action: 'delete' },
-      
+
       // Invoice permissions
       { name: 'invoices.view', description: 'View invoices', module: 'invoices', action: 'read' },
       { name: 'invoices.create', description: 'Create invoices', module: 'invoices', action: 'create' },
       { name: 'invoices.edit', description: 'Edit invoices', module: 'invoices', action: 'update' },
       { name: 'invoices.delete', description: 'Delete invoices', module: 'invoices', action: 'delete' },
-      
+
       // Settings permissions
       { name: 'settings.view', description: 'View settings', module: 'settings', action: 'read' },
       { name: 'settings.edit', description: 'Edit settings', module: 'settings', action: 'update' },
-      
+
       // User management permissions
       { name: 'users.view', description: 'View users', module: 'users', action: 'read' },
       { name: 'users.create', description: 'Create users', module: 'users', action: 'create' },
       { name: 'users.edit', description: 'Edit users', module: 'users', action: 'update' },
       { name: 'users.delete', description: 'Delete users', module: 'users', action: 'delete' },
-      
+
       // Role management permissions
       { name: 'roles.view', description: 'View roles', module: 'users', action: 'read' },
       { name: 'roles.create', description: 'Create roles', module: 'users', action: 'create' },
       { name: 'roles.edit', description: 'Edit roles', module: 'users', action: 'update' },
       { name: 'roles.delete', description: 'Delete roles', module: 'users', action: 'delete' },
-      
+
       // Reports permissions
       { name: 'reports.view', description: 'View reports', module: 'reports', action: 'read' },
       { name: 'reports.export', description: 'Export reports', module: 'reports', action: 'manage' },
-      
+
       // Payment permissions
       { name: 'payment.view', description: 'View payment plans and transactions', module: 'payment', action: 'read' },
       { name: 'payment.create', description: 'Create payment plans', module: 'payment', action: 'create' },
@@ -78,6 +78,11 @@ const seedRBAC = async () => {
       { name: 'payment.delete', description: 'Delete payment plans', module: 'payment', action: 'delete' }
     ])
     console.log('Created permissions')
+
+    // Helper function to get permission IDs by name
+    const getPermissionIds = (permissionNames) => {
+      return permissions.filter(p => permissionNames.includes(p.name)).map(p => p._id)
+    }
 
     // Create Admin role with all permissions
     const adminRole = await Role.create({
@@ -87,6 +92,63 @@ const seedRBAC = async () => {
       isSystem: true
     })
     console.log('Created Admin role')
+
+    // Create Manager role - can manage most operations but not user/role management
+    const managerPermissions = getPermissionIds([
+      'dashboard.view', 'dashboard.view_invoice_value',
+      'customers.view', 'customers.create', 'customers.edit',
+      'products.view', 'products.create', 'products.edit',
+      'proforma.view', 'proforma.create', 'proforma.edit', 'proforma.convert',
+      'proposals.view', 'proposals.create', 'proposals.edit',
+      'invoices.view', 'invoices.create', 'invoices.edit',
+      'payment.view', 'payment.create', 'payment.edit',
+      'reports.view', 'reports.export',
+      'settings.view'
+    ])
+    const managerRole = await Role.create({
+      name: 'Manager',
+      description: 'Can manage customers, products, invoices, and payments',
+      permissions: managerPermissions,
+      isSystem: true
+    })
+    console.log('Created Manager role')
+
+    // Create Staff role - can create and edit but not delete
+    const staffPermissions = getPermissionIds([
+      'dashboard.view',
+      'customers.view', 'customers.create', 'customers.edit',
+      'products.view',
+      'proforma.view', 'proforma.create', 'proforma.edit',
+      'proposals.view', 'proposals.create', 'proposals.edit',
+      'invoices.view',
+      'payment.view', 'payment.edit'
+    ])
+    const staffRole = await Role.create({
+      name: 'Staff',
+      description: 'Can create and edit invoices and customers',
+      permissions: staffPermissions,
+      isSystem: true
+    })
+    console.log('Created Staff role')
+
+    // Create Viewer role - read-only access
+    const viewerPermissions = getPermissionIds([
+      'dashboard.view',
+      'customers.view',
+      'products.view',
+      'proforma.view',
+      'proposals.view',
+      'invoices.view',
+      'payment.view',
+      'reports.view'
+    ])
+    const viewerRole = await Role.create({
+      name: 'Viewer',
+      description: 'Read-only access to all modules',
+      permissions: viewerPermissions,
+      isSystem: true
+    })
+    console.log('Created Viewer role')
 
     // Update all existing users to have the new Admin role
     const usersWithoutRole = await User.find({ role: null })
@@ -108,7 +170,7 @@ const seedRBAC = async () => {
     }
 
     console.log('\n=== RBAC Data Seeded Successfully ===')
-    console.log('Roles created: Admin only')
+    console.log('Roles created: Admin, Manager, Staff, Viewer')
     console.log('Total permissions:', permissions.length)
 
     process.exit(0)

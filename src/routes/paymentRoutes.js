@@ -7,6 +7,7 @@ import {
   updatePaymentPlan,
   deletePaymentPlan,
   getCustomerPaymentSummary,
+  getAllPaymentPlans,
 } from '../controllers/paymentController.js'
 import { authMiddleware } from '../middleware/authMiddleware.js'
 import { requirePermission } from '../middleware/permissionMiddleware.js'
@@ -19,6 +20,7 @@ router.use(authMiddleware)
 // Payment Plan CRUD
 // TODO: Re-enable permission checks after running addPaymentPermissions.js on production
 router.post('/', /* requirePermission('payment.create'), */ createPaymentPlan)
+router.get('/', /* requirePermission('payment.view'), */ getAllPaymentPlans)
 router.get('/invoice/:invoiceType/:invoiceId', /* requirePermission('payment.view'), */ getPaymentPlanByInvoice)
 router.put('/:id', /* requirePermission('payment.edit'), */ updatePaymentPlan)
 router.delete('/:id', /* requirePermission('payment.delete'), */ deletePaymentPlan)
