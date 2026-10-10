@@ -55,7 +55,13 @@ const invoiceSchema = new mongoose.Schema({
   advanceAmount: Number,
   balanceAmount: Number,
   dueDate: Date,
-  
+
+  // Payment Plan Reference
+  paymentPlan: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PaymentPlan',
+  },
+
   // Additional Information
   notes: String,
   termsAndConditions: String,

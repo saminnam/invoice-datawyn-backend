@@ -419,21 +419,21 @@ export const downloadPDF = async (req, res, next) => {
 export const convertToInvoice = async (req, res, next) => {
   try {
     const proformaInvoice = await ProformaInvoice.findById(req.params.id)
-    
+
     if (!proformaInvoice) {
       return errorResponse(res, 'Proforma invoice not found', [], 404)
     }
-    
+
     if (proformaInvoice.convertedInvoice) {
       return errorResponse(res, 'This invoice has already been converted')
     }
-    
+
     const Invoice = (await import('../models/Invoice.js')).default
     const { generateInvoiceNumber } = await import('../utils/generateInvoiceNumber.js')
-    
+
     // Generate invoice number
     const invoiceNumber = await generateInvoiceNumber('INV')
-    
+
     // Create final invoice
     const invoice = await Invoice.create({
       invoiceNumber,
@@ -464,7 +464,23 @@ export const convertToInvoice = async (req, res, next) => {
       createdBy: req.user._id,
       status: 'sent'
     })
-    
+
+    // Update payment plan if exists
+    if (proformaInvoice.paymentPlan) {
+      const PaymentPlan = (await import('../models/PaymentPlan.js')).default
+      await PaymentPlan.findByIdAndUpdate(
+        proformaInvoice.paymentPlan,
+        {
+          invoiceType: 'invoice',
+          invoiceId: invoice._id,
+          invoiceNumber: invoice.invoiceNumber
+        }
+      )
+      // Copy payment plan reference to invoice
+      invoice.paymentPlan = proformaInvoice.paymentPlan
+      await invoice.save()
+    }
+
     // Update proforma invoice
     proformaInvoice.convertedInvoice = invoice._id
     proformaInvoice.status = 'converted'
@@ -474,7 +490,7 @@ export const convertToInvoice = async (req, res, next) => {
       changedAt: new Date()
     })
     await proformaInvoice.save()
-    
+
     successResponse(res, invoice, 'Invoice converted successfully', 201)
   } catch (error) {
     next(error)
