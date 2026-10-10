@@ -311,6 +311,7 @@ export const updateProformaInvoice = async (req, res, next) => {
       updateData,
       { new: true, runValidators: true }
     ).populate('customer', 'companyName')
+     .populate('paymentPlan')
 
     // Handle payment plan update
     if (paymentPlan && paymentPlan.planType) {
