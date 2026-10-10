@@ -180,7 +180,9 @@ export const createProformaInvoice = async (req, res, next) => {
           totalAmount: calculations.grandTotal,
           hasPaymentSchedule: !!paymentPlan.paymentSchedule,
           hasEmiDetails: !!paymentPlan.emiDetails,
-          hasBalanceDueDate: !!paymentPlan.balanceDueDate
+          hasBalanceDueDate: !!paymentPlan.balanceDueDate,
+          customer: customer,
+          customerType: typeof customer
         })
 
         const paymentSchedule = PaymentPlanService.generatePaymentSchedule(
@@ -205,6 +207,9 @@ export const createProformaInvoice = async (req, res, next) => {
         }
 
         // Create payment plan
+        console.log('Creating payment plan with customer:', customer)
+        console.log('Customer ID type:', typeof customer)
+
         const newPaymentPlan = await PaymentPlan.create({
           invoiceType: 'proforma',
           invoiceId: invoice._id,
@@ -219,6 +224,7 @@ export const createProformaInvoice = async (req, res, next) => {
         })
 
         console.log('Created payment plan:', newPaymentPlan._id)
+        console.log('Payment plan customer field:', newPaymentPlan.customer)
 
         // Create installments
         for (let i = 0; i < paymentSchedule.length; i++) {

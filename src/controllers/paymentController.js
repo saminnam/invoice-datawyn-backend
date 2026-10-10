@@ -404,12 +404,33 @@ export const getCustomerPaymentSummary = async (req, res, next) => {
     const { customer } = req.params
 
     console.log('Fetching payment summary for customer:', customer)
+    console.log('Customer ID type:', typeof customer)
+
+    // Debug: Check all payment plans in database
+    const allPaymentPlans = await PaymentPlan.find({})
+    console.log('Total payment plans in database:', allPaymentPlans.length)
+    console.log('All payment plans:', allPaymentPlans.map(p => ({
+      _id: p._id,
+      invoiceType: p.invoiceType,
+      invoiceId: p.invoiceId,
+      customer: p.customer,
+      planType: p.planType,
+      totalAmount: p.totalAmount
+    })))
 
     // Get all payment plans for customer
     const paymentPlans = await PaymentPlan.find({ customer })
       .populate('invoiceId', 'invoiceNumber')
 
-    console.log('Found payment plans:', paymentPlans.length)
+    console.log('Found payment plans for customer:', paymentPlans.length)
+    console.log('Payment plans details:', paymentPlans.map(p => ({
+      _id: p._id,
+      invoiceType: p.invoiceType,
+      invoiceId: p.invoiceId,
+      customer: p.customer,
+      planType: p.planType,
+      totalAmount: p.totalAmount
+    })))
 
     // Get all installments
     const installmentIds = paymentPlans.map(p => p._id)
