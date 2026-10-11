@@ -411,31 +411,38 @@ export const updatePaymentPlan = async (req, res, next) => {
 export const deletePaymentPlan = async (req, res, next) => {
   try {
     const { id } = req.params
-    
+    const force = req.query.force === 'true'
+
     const paymentPlan = await PaymentPlan.findById(id)
     if (!paymentPlan) {
       return errorResponse(res, 'Payment plan not found', [], 404)
     }
-    
-    // Don't allow deletion if payments have been made
+
+    // Check if payments have been made
     const hasPayments = await PaymentTransaction.exists({ paymentPlan: id })
-    if (hasPayments) {
-      return errorResponse(res, 'Cannot delete payment plan after payments have been made')
+
+    if (hasPayments && !force) {
+      return errorResponse(res, 'Cannot delete payment plan after payments have been made. Use force delete to override.')
     }
-    
+
+    // If force deleting, also delete all payment transactions
+    if (hasPayments && force) {
+      await PaymentTransaction.deleteMany({ paymentPlan: id })
+    }
+
     // Delete installments
     await PaymentInstallment.deleteMany({ paymentPlan: id })
-    
+
     // Remove reference from invoice
     if (paymentPlan.invoiceType === 'proforma') {
       await ProformaInvoice.findByIdAndUpdate(paymentPlan.invoiceId, { paymentPlan: null })
     } else if (paymentPlan.invoiceType === 'invoice') {
       await Invoice.findByIdAndUpdate(paymentPlan.invoiceId, { paymentPlan: null })
     }
-    
+
     // Delete payment plan
     await PaymentPlan.findByIdAndDelete(id)
-    
+
     successResponse(res, null, 'Payment plan deleted successfully')
   } catch (error) {
     next(error)
