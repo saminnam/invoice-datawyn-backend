@@ -117,7 +117,7 @@ const seedRBAC = async () => {
 
     // Create Staff role - can create and edit but not delete
     const staffPermissions = getPermissionIds([
-      'dashboard.view',
+      'dashboard.view', 'dashboard.view_paid_value',
       'customers.view', 'customers.create', 'customers.edit',
       'products.view',
       'proforma.view', 'proforma.create', 'proforma.edit',
@@ -135,7 +135,7 @@ const seedRBAC = async () => {
 
     // Create Viewer role - read-only access
     const viewerPermissions = getPermissionIds([
-      'dashboard.view',
+      'dashboard.view', 'dashboard.view_paid_value',
       'customers.view',
       'products.view',
       'proforma.view',
