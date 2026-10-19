@@ -11,6 +11,7 @@ export const getStats = async (req, res, next) => {
       totalProformaInvoices,
       totalInvoiceValue,
       totalPaidAmount,
+      totalPendingAmount,
       recentInvoices
     ] = await Promise.all([
       Customer.countDocuments({ isActive: true }),
@@ -22,6 +23,10 @@ export const getStats = async (req, res, next) => {
       ProformaInvoice.aggregate([
         { $match: { status: { $in: ['accepted', 'converted'] } } },
         { $group: { _id: null, total: { $sum: '$advanceAmount' } } }
+      ]),
+      ProformaInvoice.aggregate([
+        { $match: { status: { $in: ['accepted', 'converted'] } } },
+        { $group: { _id: null, total: { $sum: '$balanceAmount' } } }
       ]),
       ProformaInvoice.find()
         .sort({ createdAt: -1 })
@@ -35,6 +40,7 @@ export const getStats = async (req, res, next) => {
       totalProformaInvoices,
       totalInvoiceValue: totalInvoiceValue[0]?.total || 0,
       totalPaidAmount: totalPaidAmount[0]?.total || 0,
+      totalPendingAmount: totalPendingAmount[0]?.total || 0,
       recentInvoices
     }
     

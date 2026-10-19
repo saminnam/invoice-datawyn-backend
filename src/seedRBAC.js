@@ -20,6 +20,7 @@ const seedRBAC = async () => {
       { name: 'dashboard.view', description: 'View dashboard', module: 'dashboard', action: 'read' },
       { name: 'dashboard.view_invoice_value', description: 'View total invoice value card', module: 'dashboard', action: 'read' },
       { name: 'dashboard.view_paid_value', description: 'View total invoice paid value card', module: 'dashboard', action: 'read' },
+      { name: 'dashboard.view_pending_value', description: 'View total invoice pending value card', module: 'dashboard', action: 'read' },
 
       // Customer permissions
       { name: 'customers.view', description: 'View customers', module: 'customers', action: 'read' },
@@ -96,7 +97,7 @@ const seedRBAC = async () => {
 
     // Create Manager role - can manage most operations but not user/role management
     const managerPermissions = getPermissionIds([
-      'dashboard.view', 'dashboard.view_invoice_value', 'dashboard.view_paid_value',
+      'dashboard.view', 'dashboard.view_invoice_value', 'dashboard.view_paid_value', 'dashboard.view_pending_value',
       'customers.view', 'customers.create', 'customers.edit',
       'products.view', 'products.create', 'products.edit',
       'proforma.view', 'proforma.create', 'proforma.edit', 'proforma.convert',
