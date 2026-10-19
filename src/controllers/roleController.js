@@ -68,17 +68,17 @@ export const updateRole = async (req, res, next) => {
   try {
     const { id } = req.params
     const { name, description, permissions } = req.body
-    
+
     const role = await Role.findById(id)
     if (!role) {
       return errorResponse(res, 'Role not found', [], 404)
     }
-    
-    // Prevent modification of system roles (including Admin)
-    if (role.isSystem) {
+
+    // Prevent modification of Admin and Temporary Admin roles
+    if (role.name === 'Admin' || role.name === 'Temporary Admin') {
       return errorResponse(res, 'Cannot modify system roles')
     }
-    
+
     // Validate permissions
     if (permissions && permissions.length > 0) {
       const validPermissions = await Permission.find({ _id: { $in: permissions } })
@@ -86,13 +86,13 @@ export const updateRole = async (req, res, next) => {
         return errorResponse(res, 'Some permissions are invalid')
       }
     }
-    
+
     const updatedRole = await Role.findByIdAndUpdate(
       id,
       { name, description, permissions: permissions || [] },
       { new: true, runValidators: true }
     ).populate('permissions')
-    
+
     successResponse(res, updatedRole, 'Role updated successfully')
   } catch (error) {
     next(error)
@@ -103,21 +103,16 @@ export const deleteRole = async (req, res, next) => {
   try {
     const { id } = req.params
     const role = await Role.findById(id)
-    
+
     if (!role) {
       return errorResponse(res, 'Role not found', [], 404)
     }
-    
-    // Prevent deletion of system roles
-    if (role.isSystem) {
+
+    // Prevent deletion of Admin and Temporary Admin roles
+    if (role.name === 'Admin' || role.name === 'Temporary Admin') {
       return errorResponse(res, 'Cannot delete system roles')
     }
-    
-    // Prevent deletion of Admin role specifically
-    if (role.name === 'Admin') {
-      return errorResponse(res, 'Cannot delete the Admin role')
-    }
-    
+
     await Role.findByIdAndDelete(id)
     successResponse(res, null, 'Role deleted successfully')
   } catch (error) {
