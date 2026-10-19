@@ -9,10 +9,10 @@ const seedRBAC = async () => {
     await mongoose.connect(config.mongoUri)
     console.log('Connected to MongoDB')
 
-    // Clear existing RBAC data but preserve users
+    // Clear existing permissions and roles
     await Permission.deleteMany({})
     await Role.deleteMany({})
-    console.log('Cleared existing RBAC data (preserving users)')
+    console.log('Cleared existing permissions and roles')
 
     // Create permissions
     const permissions = await Permission.create([
@@ -81,99 +81,18 @@ const seedRBAC = async () => {
     ])
     console.log('Created permissions')
 
-    // Helper function to get permission IDs by name
-    const getPermissionIds = (permissionNames) => {
-      return permissions.filter(p => permissionNames.includes(p.name)).map(p => p._id)
-    }
-
-    // Create Admin role with all permissions
-    const adminRole = await Role.create({
-      name: 'Admin',
-      description: 'Full system access',
-      permissions: permissions.map(p => p._id),
-      isSystem: true
-    })
-    console.log('Created Admin role')
-
-    // Create Manager role - can manage most operations but not user/role management
-    const managerPermissions = getPermissionIds([
-      'dashboard.view', 'dashboard.view_invoice_value', 'dashboard.view_paid_value', 'dashboard.view_pending_value',
-      'customers.view', 'customers.create', 'customers.edit',
-      'products.view', 'products.create', 'products.edit',
-      'proforma.view', 'proforma.create', 'proforma.edit', 'proforma.convert',
-      'proposals.view', 'proposals.create', 'proposals.edit',
-      'invoices.view', 'invoices.create', 'invoices.edit',
-      'payment.view', 'payment.create', 'payment.edit',
-      'reports.view', 'reports.export',
-      'settings.view'
-    ])
-    const managerRole = await Role.create({
-      name: 'Manager',
-      description: 'Can manage customers, products, invoices, and payments',
-      permissions: managerPermissions,
-      isSystem: true
-    })
-    console.log('Created Manager role')
-
-    // Create Staff role - can create and edit but not delete
-    const staffPermissions = getPermissionIds([
-      'dashboard.view', 'dashboard.view_paid_value',
-      'customers.view', 'customers.create', 'customers.edit',
-      'products.view',
-      'proforma.view', 'proforma.create', 'proforma.edit',
-      'proposals.view', 'proposals.create', 'proposals.edit',
-      'invoices.view',
-      'payment.view', 'payment.edit'
-    ])
-    const staffRole = await Role.create({
-      name: 'Staff',
-      description: 'Can create and edit invoices and customers',
-      permissions: staffPermissions,
-      isSystem: true
-    })
-    console.log('Created Staff role')
-
-    // Create Viewer role - read-only access
-    const viewerPermissions = getPermissionIds([
-      'dashboard.view', 'dashboard.view_paid_value',
-      'customers.view',
-      'products.view',
-      'proforma.view',
-      'proposals.view',
-      'invoices.view',
-      'payment.view',
-      'reports.view'
-    ])
-    const viewerRole = await Role.create({
-      name: 'Viewer',
-      description: 'Read-only access to all modules',
-      permissions: viewerPermissions,
-      isSystem: true
-    })
-    console.log('Created Viewer role')
-
-    // Update all existing users to have the new Admin role
-    const usersWithoutRole = await User.find({ role: null })
-    for (const user of usersWithoutRole) {
-      user.role = adminRole._id
-      user.legacyRole = 'admin'
-      await user.save()
-    }
-    if (usersWithoutRole.length > 0) {
-      console.log(`Updated ${usersWithoutRole.length} existing users with Admin role`)
-    }
-
-    // Update existing Admin role to include all new permissions
-    const existingAdminRole = await Role.findOne({ name: 'Admin' })
-    if (existingAdminRole) {
-      existingAdminRole.permissions = permissions.map(p => p._id)
-      await existingAdminRole.save()
-      console.log('Updated existing Admin role with all permissions')
-    }
+    // Clear user role assignments
+    const updateResult = await User.updateMany(
+      {},
+      { $unset: { role: 1, legacyRole: 1 } }
+    )
+    console.log(`Cleared role assignments from ${updateResult.modifiedCount} users`)
 
     console.log('\n=== RBAC Data Seeded Successfully ===')
-    console.log('Roles created: Admin, Manager, Staff, Viewer')
     console.log('Total permissions:', permissions.length)
+    console.log('All roles cleared')
+    console.log('Users can now create custom roles through the Roles page')
+    console.log('IMPORTANT: You must create at least one role and assign it to users to regain access')
 
     process.exit(0)
   } catch (error) {
