@@ -1,6 +1,7 @@
 import Customer from '../models/Customer.js'
 import Product from '../models/Product.js'
 import ProformaInvoice from '../models/ProformaInvoice.js'
+import PaymentPlan from '../models/PaymentPlan.js'
 import { successResponse } from '../utils/response.js'
 
 export const getStats = async (req, res, next) => {
@@ -36,7 +37,16 @@ export const getStats = async (req, res, next) => {
       }
     ])
 
-    const totalPaidAmount = acceptedInvoices[0]?.totalPaid || 0
+    // Calculate total paid from payment plans
+    const paymentPlansPaid = await PaymentPlan.aggregate([
+      { $match: { status: { $in: ['active', 'completed'] } } },
+      { $group: { _id: null, total: { $sum: '$totalPaid' } } }
+    ])
+
+    const invoicePaidAmount = acceptedInvoices[0]?.totalPaid || 0
+    const paymentPlanPaidAmount = paymentPlansPaid[0]?.total || 0
+    const totalPaidAmount = invoicePaidAmount + paymentPlanPaidAmount
+
     const totalGrandAmount = acceptedInvoices[0]?.totalGrand || 0
     const totalPendingAmount = totalGrandAmount - totalPaidAmount
 
