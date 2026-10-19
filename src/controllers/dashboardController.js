@@ -10,8 +10,6 @@ export const getStats = async (req, res, next) => {
       totalProducts,
       totalProformaInvoices,
       totalInvoiceValue,
-      totalPaidAmount,
-      totalPendingAmount,
       recentInvoices
     ] = await Promise.all([
       Customer.countDocuments({ isActive: true }),
@@ -20,30 +18,38 @@ export const getStats = async (req, res, next) => {
       ProformaInvoice.aggregate([
         { $group: { _id: null, total: { $sum: '$grandTotal' } } }
       ]),
-      ProformaInvoice.aggregate([
-        { $match: { status: { $in: ['accepted', 'converted'] } } },
-        { $group: { _id: null, total: { $sum: '$advanceAmount' } } }
-      ]),
-      ProformaInvoice.aggregate([
-        { $match: { status: { $in: ['accepted', 'converted'] } } },
-        { $group: { _id: null, total: { $sum: '$balanceAmount' } } }
-      ]),
       ProformaInvoice.find()
         .sort({ createdAt: -1 })
         .limit(5)
         .populate('customer', 'companyName')
     ])
-    
+
+    // Calculate paid and pending amounts from accepted/converted invoices
+    const acceptedInvoices = await ProformaInvoice.aggregate([
+      { $match: { status: { $in: ['accepted', 'converted'] } } },
+      {
+        $group: {
+          _id: null,
+          totalPaid: { $sum: { $ifNull: ['$advanceAmount', 0] } },
+          totalGrand: { $sum: '$grandTotal' }
+        }
+      }
+    ])
+
+    const totalPaidAmount = acceptedInvoices[0]?.totalPaid || 0
+    const totalGrandAmount = acceptedInvoices[0]?.totalGrand || 0
+    const totalPendingAmount = totalGrandAmount - totalPaidAmount
+
     const stats = {
       totalCustomers,
       totalProducts,
       totalProformaInvoices,
       totalInvoiceValue: totalInvoiceValue[0]?.total || 0,
-      totalPaidAmount: totalPaidAmount[0]?.total || 0,
-      totalPendingAmount: totalPendingAmount[0]?.total || 0,
+      totalPaidAmount,
+      totalPendingAmount,
       recentInvoices
     }
-    
+
     successResponse(res, stats)
   } catch (error) {
     next(error)
